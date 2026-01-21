@@ -299,3 +299,4 @@ MIT License - Free to use and modify.
 **Built with**: Next.js 14, TypeScript, Tailwind CSS, Supabase, Zod  
 **Author**: AI-assisted development for modern sales teams  
 **Version**: 1.0.0 (MVP)
+# fuzr
