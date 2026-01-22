@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { ProfileSchema, SELLING_CATEGORIES, INDUSTRIES, SIZE_BANDS, BUYER_PERSONAS, ROLES } from '@/types/schema'
 import type { ProfileFormData } from '@/types/schema'
+import type { Profile } from '@/types/database'
 
 export default function OnboardingPage() {
     const router = useRouter()
@@ -38,11 +39,13 @@ export default function OnboardingPage() {
             setUserId(user.id)
 
             // Try to load existing profile
-            const { data: profile } = await supabase
+            const { data: profileData } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('user_id', user.id)
                 .single()
+
+            const profile = profileData as unknown as Profile
 
             if (profile) {
                 setFormData({
@@ -83,8 +86,8 @@ export default function OnboardingPage() {
             const validated = ProfileSchema.parse(formData)
 
             // Save to database
-            const { error: upsertError } = await supabase
-                .from('profiles')
+            const { error: upsertError } = await (supabase
+                .from('profiles') as any)
                 .upsert({
                     user_id: userId!,
                     ...validated,

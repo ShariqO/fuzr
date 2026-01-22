@@ -44,12 +44,12 @@ interface ScoredCompany {
 
 // Extended Profile type to include embedding (may come from DB with or without)
 type ProfileWithEmbedding = Omit<Profile, 'selling_embedding'> & {
-    selling_embedding?: number[] | null
+    selling_embedding: number[] | null
 }
 
 // Extended Company type to include embedding (may come from DB with or without)
 type CompanyWithEmbedding = Omit<Company, 'embedding'> & {
-    embedding?: number[] | null
+    embedding: number[] | null
 }
 
 export class RecommendationEngine {

@@ -55,9 +55,11 @@ export async function POST(request: Request) {
         const insertedCompanies = []
 
         for (const { company, signals } of enrichedCompanies) {
+            if (!company.company_number) continue
+
             // Check if company already exists by company_number
-            const { data: existing } = await supabase
-                .from('companies')
+            const { data: existing } = await (supabase
+                .from('companies') as any)
                 .select('id')
                 .eq('company_number', company.company_number)
                 .single()
@@ -66,8 +68,8 @@ export async function POST(request: Request) {
 
             if (existing) {
                 // Update existing company
-                await supabase
-                    .from('companies')
+                await (supabase
+                    .from('companies') as any)
                     .update({
                         ...company,
                         last_enriched_at: new Date().toISOString(),
@@ -77,8 +79,8 @@ export async function POST(request: Request) {
                 companyId = existing.id
             } else {
                 // Insert new company
-                const { data: inserted, error: insertError } = await supabase
-                    .from('companies')
+                const { data: inserted, error: insertError } = await (supabase
+                    .from('companies') as any)
                     .insert(company)
                     .select('id')
                     .single()
@@ -93,8 +95,8 @@ export async function POST(request: Request) {
 
             // Insert signals
             for (const signal of signals) {
-                await supabase
-                    .from('signals')
+                await (supabase
+                    .from('signals') as any)
                     .insert({
                         ...signal,
                         company_id: companyId,

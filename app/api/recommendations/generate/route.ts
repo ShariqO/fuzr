@@ -44,18 +44,22 @@ export async function POST() {
         }
 
         // Get all companies with their signals
-        const { data: companies, error: companiesError } = await supabase
+        const { data: companiesData, error: companiesError } = await supabase
             .from('companies')
             .select('*')
+
+        const companies = companiesData as unknown as Company[]
 
         if (companiesError) {
             console.error('Error fetching companies:', companiesError)
             return NextResponse.json({ error: 'Failed to fetch companies' }, { status: 500 })
         }
 
-        const { data: signals, error: signalsError } = await supabase
+        const { data: signalsData, error: signalsError } = await supabase
             .from('signals')
             .select('*')
+
+        const signals = signalsData as unknown as Signal[]
 
         if (signalsError) {
             console.error('Error fetching signals:', signalsError)
@@ -94,8 +98,8 @@ export async function POST() {
             explanation_json: rec.explanation,
         }))
 
-        const { error: insertError } = await supabase
-            .from('recommendations')
+        const { error: insertError } = await (supabase
+            .from('recommendations') as any)
             .insert(recommendationsToInsert)
 
         if (insertError) {

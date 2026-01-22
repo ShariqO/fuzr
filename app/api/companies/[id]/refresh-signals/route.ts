@@ -29,7 +29,7 @@ export async function POST(
         }
 
         // Refresh signals using the pipeline
-        const newSignals = await refreshCompanySignals(company.name, companyId)
+        const newSignals = await refreshCompanySignals((company as any).name, companyId)
 
         if (newSignals.length === 0) {
             return NextResponse.json({
@@ -52,8 +52,8 @@ export async function POST(
             company_id: companyId,
         }))
 
-        const { error: insertError } = await supabase
-            .from('signals')
+        const { error: insertError } = await (supabase
+            .from('signals') as any)
             .insert(signalsToInsert)
 
         if (insertError) {
@@ -62,8 +62,8 @@ export async function POST(
         }
 
         // Update company last_enriched_at
-        await supabase
-            .from('companies')
+        await (supabase
+            .from('companies') as any)
             .update({ last_enriched_at: new Date().toISOString() })
             .eq('id', companyId)
 
