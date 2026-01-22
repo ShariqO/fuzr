@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import type { RecommendationWithCompany } from '@/types/database'
@@ -24,21 +24,7 @@ export default function DashboardPage() {
     const [sizeFilter, setSizeFilter] = useState('')
     const [confidenceFilter, setConfidenceFilter] = useState(0)
 
-    useEffect(() => {
-        async function checkAuthAndLoadData() {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) {
-                router.push('/auth/signin')
-                return
-            }
-
-            await loadRecommendations()
-        }
-
-        checkAuthAndLoadData()
-    }, [supabase, router])
-
-    const loadRecommendations = async () => {
+    const loadRecommendations = useCallback(async () => {
         setLoading(true)
         const { data, error: fetchError } = await supabase
             .from('recommendations')
@@ -51,7 +37,21 @@ export default function DashboardPage() {
             setRecommendations(data || [])
         }
         setLoading(false)
-    }
+    }, [supabase])
+
+    useEffect(() => {
+        async function checkAuthAndLoadData() {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) {
+                router.push('/auth/signin')
+                return
+            }
+
+            await loadRecommendations()
+        }
+
+        checkAuthAndLoadData()
+    }, [supabase, router, loadRecommendations])
 
     const handleGenerate = async () => {
         setGenerating(true)
