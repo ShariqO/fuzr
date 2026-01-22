@@ -1,8 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { RecommendationEngine } from '@/lib/scoring-engine'
 import { checkRateLimit } from '@/lib/rate-limiter'
+import {
+    getCompanies,
+    getSignals,
+    getProfileByUserId,
+    deleteRecommendationsByUserId,
+    insertRecommendations
+} from '@/lib/db/queries'
 import { NextResponse } from 'next/server'
-import type { Company, Signal } from '@/types/database'
+import type { Signal, Database } from '@/types/database'
 
 export async function POST() {
     try {
@@ -29,52 +36,29 @@ export async function POST() {
             )
         }
 
-        // Get user profile
-        const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('user_id', user.id)
-            .single()
+        // Get user profile using type-safe helper
+        const profile = await getProfileByUserId(supabase, user.id)
 
-        if (profileError || !profile) {
+        if (!profile) {
             return NextResponse.json(
                 { error: 'Profile not found. Please complete onboarding first.' },
                 { status: 400 }
             )
         }
 
-        // Get all companies with their signals
-        const { data: companiesData, error: companiesError } = await supabase
-            .from('companies')
-            .select('*')
-
-        const companies = companiesData as unknown as Company[]
-
-        if (companiesError) {
-            console.error('Error fetching companies:', companiesError)
-            return NextResponse.json({ error: 'Failed to fetch companies' }, { status: 500 })
-        }
-
-        const { data: signalsData, error: signalsError } = await supabase
-            .from('signals')
-            .select('*')
-
-        const signals = signalsData as unknown as Signal[]
-
-        if (signalsError) {
-            console.error('Error fetching signals:', signalsError)
-            return NextResponse.json({ error: 'Failed to fetch signals' }, { status: 500 })
-        }
+        // Get all companies and signals using type-safe helpers
+        const companies = await getCompanies(supabase)
+        const signals = await getSignals(supabase)
 
         // Group signals by company
         const signalsByCompany = new Map<string, Signal[]>()
-        for (const signal of signals || []) {
+        for (const signal of signals) {
             const existing = signalsByCompany.get(signal.company_id) || []
             existing.push(signal)
             signalsByCompany.set(signal.company_id, existing)
         }
 
-        const companiesWithSignals = (companies || []).map(company => ({
+        const companiesWithSignals = companies.map(company => ({
             company,
             signals: signalsByCompany.get(company.id) || [],
         }))
@@ -84,28 +68,19 @@ export async function POST() {
         const recommendations = engine.generateRecommendations(companiesWithSignals, 20)
 
         // Delete old recommendations for this user
-        await supabase
-            .from('recommendations')
-            .delete()
-            .eq('user_id', user.id)
+        await deleteRecommendationsByUserId(supabase, user.id)
 
         // Insert new recommendations
-        const recommendationsToInsert = recommendations.map(rec => ({
-            user_id: user.id,
-            company_id: rec.company.id,
-            score: rec.score,
-            confidence: rec.confidence,
-            explanation_json: rec.explanation,
-        }))
+        const recommendationsToInsert: Database['public']['Tables']['recommendations']['Insert'][] =
+            recommendations.map(rec => ({
+                user_id: user.id,
+                company_id: rec.company.id,
+                score: rec.score,
+                confidence: rec.confidence,
+                explanation_json: rec.explanation,
+            }))
 
-        const { error: insertError } = await (supabase
-            .from('recommendations') as any)
-            .insert(recommendationsToInsert)
-
-        if (insertError) {
-            console.error('Error inserting recommendations:', insertError)
-            return NextResponse.json({ error: 'Failed to save recommendations' }, { status: 500 })
-        }
+        await insertRecommendations(supabase, recommendationsToInsert)
 
         return NextResponse.json(
             {

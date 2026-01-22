@@ -1,8 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { searchAndEnrichCompanies } from '@/lib/pipeline/company-enricher'
 import { isCompaniesHouseEnabled } from '@/lib/data-sources/companies-house'
+import { findCompanyByNumber, insertCompany, updateCompany, insertSignals } from '@/lib/db/queries'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import type { Database } from '@/types/database'
 
 const SearchSchema = z.object({
     query: z.string().min(2).max(100),
@@ -52,62 +54,52 @@ export async function POST(request: Request) {
         }
 
         // Insert companies and signals into database
-        const insertedCompanies = []
+        const insertedCompanies: Array<{ id: string; name: string; signals_count: number }> = []
 
         for (const { company, signals } of enrichedCompanies) {
             if (!company.company_number) continue
 
-            // Check if company already exists by company_number
-            const { data: existing } = await (supabase
-                .from('companies') as any)
-                .select('id')
-                .eq('company_number', company.company_number)
-                .single()
+            try {
+                // Check if company already exists by company_number
+                const existing = await findCompanyByNumber(supabase, company.company_number)
 
-            let companyId: string
+                let companyId: string
 
-            if (existing) {
-                // Update existing company
-                await (supabase
-                    .from('companies') as any)
-                    .update({
+                if (existing) {
+                    // Update existing company
+                    await updateCompany(supabase, existing.id, {
                         ...company,
                         last_enriched_at: new Date().toISOString(),
                     })
-                    .eq('id', existing.id)
-
-                companyId = existing.id
-            } else {
-                // Insert new company
-                const { data: inserted, error: insertError } = await (supabase
-                    .from('companies') as any)
-                    .insert(company)
-                    .select('id')
-                    .single()
-
-                if (insertError) {
-                    console.error('Error inserting company:', insertError)
-                    continue
+                    companyId = existing.id
+                } else {
+                    // Insert new company
+                    const inserted = await insertCompany(supabase, company)
+                    companyId = inserted.id
                 }
 
-                companyId = inserted.id
-            }
+                // Insert signals
+                const signalsToInsert: Database['public']['Tables']['signals']['Insert'][] = signals.map(signal => ({
+                    company_id: companyId,
+                    signal_type: signal.signal_type,
+                    evidence_text: signal.evidence_text,
+                    source_label: signal.source_label,
+                    signal_date: signal.signal_date,
+                    confidence: signal.confidence,
+                    extraction_method: signal.extraction_method,
+                }))
 
-            // Insert signals
-            for (const signal of signals) {
-                await (supabase
-                    .from('signals') as any)
-                    .insert({
-                        ...signal,
-                        company_id: companyId,
-                    })
-            }
+                await insertSignals(supabase, signalsToInsert)
 
-            insertedCompanies.push({
-                id: companyId,
-                name: company.name,
-                signals_count: signals.length,
-            })
+                insertedCompanies.push({
+                    id: companyId,
+                    name: company.name,
+                    signals_count: signals.length,
+                })
+            } catch (err) {
+                console.error('Error processing company:', company.name, err)
+                continue
+            }
         }
 
         return NextResponse.json({

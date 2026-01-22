@@ -85,14 +85,14 @@ export default function OnboardingPage() {
             // Validate with Zod
             const validated = ProfileSchema.parse(formData)
 
-            // Save to database
-            const { error: upsertError } = await (supabase
-                .from('profiles') as any)
+            // Save to database - cast the entire operation chain to handle type inference
+            const { error: upsertError } = await supabase
+                .from('profiles')
                 .upsert({
                     user_id: userId!,
                     ...validated,
                     updated_at: new Date().toISOString(),
-                })
+                } as any)
 
             if (upsertError) throw upsertError
 

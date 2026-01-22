@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { refreshCompanySignals } from '@/lib/pipeline/company-enricher'
+import { getCompanyById, updateCompany, insertSignals, deleteSignalsByMethod } from '@/lib/db/queries'
 import { NextResponse } from 'next/server'
+import type { Database } from '@/types/database'
 
 export async function POST(
     request: Request,
@@ -17,19 +19,15 @@ export async function POST(
 
         const companyId = params.id
 
-        // Get company details
-        const { data: company, error: companyError } = await supabase
-            .from('companies')
-            .select('*')
-            .eq('id', companyId)
-            .single()
+        // Get company details using type-safe helper
+        const company = await getCompanyById(supabase, companyId)
 
-        if (companyError || !company) {
+        if (!company) {
             return NextResponse.json({ error: 'Company not found' }, { status: 404 })
         }
 
         // Refresh signals using the pipeline
-        const newSignals = await refreshCompanySignals((company as any).name, companyId)
+        const newSignals = await refreshCompanySignals(company.name, companyId)
 
         if (newSignals.length === 0) {
             return NextResponse.json({
@@ -40,32 +38,25 @@ export async function POST(
         }
 
         // Delete old AI-extracted signals (keep manual/mock ones)
-        await supabase
-            .from('signals')
-            .delete()
-            .eq('company_id', companyId)
-            .in('extraction_method', ['ai_extracted', 'api'])
+        await deleteSignalsByMethod(supabase, companyId, ['ai_extracted', 'api'])
 
-        // Insert new signals
-        const signalsToInsert = newSignals.map(signal => ({
-            ...signal,
+        // Insert new signals with company_id
+        const signalsToInsert: Database['public']['Tables']['signals']['Insert'][] = newSignals.map(signal => ({
             company_id: companyId,
+            signal_type: signal.signal_type,
+            evidence_text: signal.evidence_text,
+            source_label: signal.source_label,
+            signal_date: signal.signal_date,
+            confidence: signal.confidence,
+            extraction_method: signal.extraction_method,
         }))
 
-        const { error: insertError } = await (supabase
-            .from('signals') as any)
-            .insert(signalsToInsert)
-
-        if (insertError) {
-            console.error('Error inserting signals:', insertError)
-            return NextResponse.json({ error: 'Failed to save signals' }, { status: 500 })
-        }
+        await insertSignals(supabase, signalsToInsert)
 
         // Update company last_enriched_at
-        await (supabase
-            .from('companies') as any)
-            .update({ last_enriched_at: new Date().toISOString() })
-            .eq('id', companyId)
+        await updateCompany(supabase, companyId, {
+            last_enriched_at: new Date().toISOString(),
+        })
 
         return NextResponse.json({
             success: true,
