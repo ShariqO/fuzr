@@ -98,7 +98,7 @@ export default function DashboardPage() {
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `dealsignals-recommendations-${new Date().toISOString().split('T')[0]}.csv`
+        a.download = `fuzr-recommendations-${new Date().toISOString().split('T')[0]}.csv`
         a.click()
     }
 
@@ -171,7 +171,7 @@ export default function DashboardPage() {
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
             <nav className="bg-white dark:bg-gray-800 shadow">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">DealSignals</h1>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">FUZR</h1>
                     <div className="flex gap-4">
                         <button
                             onClick={() => router.push('/onboarding')}

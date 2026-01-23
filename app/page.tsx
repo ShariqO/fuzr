@@ -15,7 +15,7 @@ export default function HomePage() {
                             <span className="text-primary-200">With AI-Powered Signals</span>
                         </h1>
                         <p className="text-xl md:text-2xl text-primary-100 mb-8 max-w-3xl mx-auto">
-                            DealSignals identifies and ranks companies showing buying signals that match your ICP.
+                            FUZR identifies and ranks companies showing buying signals that match your ICP.
                             Stop cold calling. Start warm conversations.
                         </p>
                         <div className="flex gap-4 justify-center">
@@ -47,7 +47,7 @@ export default function HomePage() {
             <div className="bg-white py-24">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <h2 className="text-4xl font-bold text-center text-gray-900 mb-16">
-                        How DealSignals Works
+                        How FUZR Works
                     </h2>
                     <div className="grid md:grid-cols-3 gap-12">
                         <div className="text-center">
@@ -145,7 +145,7 @@ export default function HomePage() {
             {/* Footer */}
             <div className="bg-primary-900 py-8">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-primary-300">
-                    <p>© 2026 DealSignals. Built for modern sales teams.</p>
+                    <p>© 2026 FUZR. Built for modern sales teams.</p>
                 </div>
             </div>
 

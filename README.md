@@ -1,4 +1,4 @@
-# DealSignals MVP
+# FUZR MVP
 
 > AI-powered sales intelligence platform that identifies and ranks your most promising prospects based on real-time signals and ICP fit.
 
@@ -14,7 +14,7 @@
 1. **Clone and Install**
 
 ```bash
-cd dealsignals
+cd fuzr
 npm install
 ```
 
@@ -133,7 +133,7 @@ Every recommendation includes:
 ## 📁 Project Structure
 
 ```
-dealsignals/
+fuzr/
 ├── app/
 │   ├── api/
 │   │   └── recommendations/

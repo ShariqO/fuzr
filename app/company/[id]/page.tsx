@@ -96,7 +96,7 @@ export default function CompanyDetailPage() {
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `${company.name.toLowerCase().replace(/\s+/g, '-')}-dealsignals.json`
+        a.download = `${company.name.toLowerCase().replace(/\s+/g, '-')}-fuzr.json`
         a.click()
     }
 
