@@ -12,17 +12,31 @@ const SearchSchema = z.object({
 })
 
 export async function POST(request: Request) {
+    const requestId = crypto.randomUUID()
+    console.log(`[${requestId}] Search request started`)
+
     try {
+        // Log environment status (safety check)
+        console.log(`[${requestId}] Environment check:`, {
+            hasCompaniesHouseKey: !!process.env.COMPANIES_HOUSE_API_KEY,
+            hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+            hasAdzunaId: !!process.env.ADZUNA_APP_ID,
+            hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+            nodeEnv: process.env.NODE_ENV
+        })
+
         const supabase = await createClient()
 
         // Check authentication
         const { data: { user }, error: authError } = await supabase.auth.getUser()
         if (authError || !user) {
+            console.warn(`[${requestId}] Unauthorized request`)
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
         // Check if Companies House API is available
         if (!isCompaniesHouseEnabled()) {
+            console.error(`[${requestId}] Companies House API not configured`)
             return NextResponse.json(
                 { error: 'Companies House API not configured' },
                 { status: 503 }
@@ -34,6 +48,7 @@ export async function POST(request: Request) {
         const parsed = SearchSchema.safeParse(body)
 
         if (!parsed.success) {
+            console.warn(`[${requestId}] Invalid request body`, parsed.error.errors)
             return NextResponse.json(
                 { error: 'Invalid request', details: parsed.error.errors },
                 { status: 400 }
@@ -41,9 +56,14 @@ export async function POST(request: Request) {
         }
 
         const { query, limit } = parsed.data
+        console.log(`[${requestId}] Searching for: "${query}" (limit: ${limit})`)
 
         // Search and enrich companies
+        console.time(`[${requestId}] Search Duration`)
         const enrichedCompanies = await searchAndEnrichCompanies(query, limit)
+        console.timeEnd(`[${requestId}] Search Duration`)
+
+        console.log(`[${requestId}] Found ${enrichedCompanies.length} companies`)
 
         if (enrichedCompanies.length === 0) {
             return NextResponse.json({
@@ -79,17 +99,19 @@ export async function POST(request: Request) {
                 }
 
                 // Insert signals
-                const signalsToInsert: Database['public']['Tables']['signals']['Insert'][] = signals.map(signal => ({
-                    company_id: companyId,
-                    signal_type: signal.signal_type,
-                    evidence_text: signal.evidence_text,
-                    source_label: signal.source_label,
-                    signal_date: signal.signal_date,
-                    confidence: signal.confidence,
-                    extraction_method: signal.extraction_method,
-                }))
+                if (signals.length > 0) {
+                    const signalsToInsert: Database['public']['Tables']['signals']['Insert'][] = signals.map(signal => ({
+                        company_id: companyId,
+                        signal_type: signal.signal_type,
+                        evidence_text: signal.evidence_text,
+                        source_label: signal.source_label,
+                        signal_date: signal.signal_date,
+                        confidence: signal.confidence,
+                        extraction_method: signal.extraction_method,
+                    }))
 
-                await insertSignals(supabase, signalsToInsert)
+                    await insertSignals(supabase, signalsToInsert)
+                }
 
                 insertedCompanies.push({
                     id: companyId,
@@ -97,7 +119,8 @@ export async function POST(request: Request) {
                     signals_count: signals.length,
                 })
             } catch (err) {
-                console.error('Error processing company:', company.name, err)
+                console.error(`[${requestId}] Error processing company ${company.name}:`, err)
+                // Continue with other companies instead of failing the whole batch
                 continue
             }
         }
@@ -108,7 +131,13 @@ export async function POST(request: Request) {
             message: `Added ${insertedCompanies.length} companies from Companies House`,
         })
     } catch (error) {
-        console.error('Error searching companies:', error)
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+        console.error(`[${requestId}] CRITICAL ERROR in search route:`, error)
+        if (error instanceof Error) {
+            console.error(`[${requestId}] Stack trace:`, error.stack)
+        }
+        return NextResponse.json(
+            { error: 'Internal server error', requestId },
+            { status: 500 }
+        )
     }
 }

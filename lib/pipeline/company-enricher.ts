@@ -67,78 +67,89 @@ export async function searchAndEnrichCompanies(
 async function enrichCompanyData(
     profile: CompaniesHouseCompany
 ): Promise<EnrichedCompany | null> {
+    console.log(`[Enricher] Processing company: ${profile.company_name} (${profile.company_number})`)
     const signals: Omit<SignalInsert, 'company_id'>[] = []
 
-    // Build location string
-    const address = profile.registered_office_address
-    const location = address?.locality || address?.region || 'UK'
+    try {
+        // Build location string
+        const address = profile.registered_office_address
+        const location = address?.locality || address?.region || 'UK'
 
-    // Map SIC codes to industry
-    const industry = mapSicCodesToIndustry(profile.sic_codes)
+        // Map SIC codes to industry
+        const industry = mapSicCodesToIndustry(profile.sic_codes)
 
-    // Estimate size band (rough heuristic)
-    const sizeBand = estimateSizeBand(profile.company_type)
+        // Estimate size band (rough heuristic)
+        const sizeBand = estimateSizeBand(profile.company_type)
 
-    // Build description
-    const description = `${profile.company_name} is a ${profile.company_type.replace(/-/g, ' ')} registered in the UK. Industry classification: ${industry}.`
+        // Build description
+        const description = `${profile.company_name} is a ${profile.company_type.replace(/-/g, ' ')} registered in the UK. Industry classification: ${industry}.`
 
-    // Generate embedding for the company description
-    const embedding = await generateEmbedding(description)
+        // Generate embedding for the company description
+        console.log(`[Enricher] Generating embedding for ${profile.company_number}`)
+        const embedding = await generateEmbedding(description)
 
-    // Create base company object
-    const company: CompanyInsert = {
-        name: profile.company_name,
-        website: `https://find-and-update.company-information.service.gov.uk/company/${profile.company_number}`,
-        industry,
-        size_band: sizeBand,
-        location_uk: location,
-        description,
-        embedding: embedding || undefined,
-        data_source: 'companies_house',
-        company_number: profile.company_number,
-        sic_codes: profile.sic_codes,
-        incorporation_date: profile.date_of_creation,
-        last_enriched_at: new Date().toISOString(),
-    }
-
-    // Get hiring signals from Adzuna
-    const hiringAnalysis = await analyzeHiringSignals(profile.company_name)
-    if (hiringAnalysis) {
-        const hiringSignal = createHiringSignal(hiringAnalysis)
-        if (hiringSignal) {
-            signals.push({
-                signal_type: hiringSignal.signal_type,
-                evidence_text: hiringSignal.evidence_text,
-                source_label: 'Adzuna Jobs API',
-                signal_date: new Date().toISOString().split('T')[0],
-                confidence: hiringSignal.confidence,
-                extraction_method: 'api',
-            })
+        // Create base company object
+        const company: CompanyInsert = {
+            name: profile.company_name,
+            website: `https://find-and-update.company-information.service.gov.uk/company/${profile.company_number}`,
+            industry,
+            size_band: sizeBand,
+            location_uk: location,
+            description,
+            embedding: embedding || undefined,
+            data_source: 'companies_house',
+            company_number: profile.company_number,
+            sic_codes: profile.sic_codes,
+            incorporation_date: profile.date_of_creation,
+            last_enriched_at: new Date().toISOString(),
         }
-    }
 
-    // Get news and extract signals
-    const news = await fetchNewsFromMultipleSources(profile.company_name)
-    if (news.length > 0) {
-        const newsTexts = getNewsTextForProcessing(news)
-        const extractedSignals = await extractSignalsFromMultipleTexts(
-            newsTexts,
-            profile.company_name
-        )
-
-        for (const signal of extractedSignals) {
-            signals.push({
-                signal_type: signal.signal_type,
-                evidence_text: signal.evidence_text,
-                source_label: signal.source_label,
-                signal_date: signal.signal_date || new Date().toISOString().split('T')[0],
-                confidence: signal.confidence,
-                extraction_method: 'ai_extracted',
-            })
+        // Get hiring signals from Adzuna
+        console.log(`[Enricher] Fetching hiring signals for ${profile.company_name}`)
+        const hiringAnalysis = await analyzeHiringSignals(profile.company_name)
+        if (hiringAnalysis) {
+            const hiringSignal = createHiringSignal(hiringAnalysis)
+            if (hiringSignal) {
+                signals.push({
+                    signal_type: hiringSignal.signal_type,
+                    evidence_text: hiringSignal.evidence_text,
+                    source_label: 'Adzuna Jobs API',
+                    signal_date: new Date().toISOString().split('T')[0],
+                    confidence: hiringSignal.confidence,
+                    extraction_method: 'api',
+                })
+            }
         }
-    }
 
-    return { company, signals }
+        // Get news and extract signals
+        console.log(`[Enricher] Fetching news for ${profile.company_name}`)
+        const news = await fetchNewsFromMultipleSources(profile.company_name)
+        if (news.length > 0) {
+            console.log(`[Enricher] Found ${news.length} articles, extracting signals...`)
+            const newsTexts = getNewsTextForProcessing(news)
+            const extractedSignals = await extractSignalsFromMultipleTexts(
+                newsTexts,
+                profile.company_name
+            )
+
+            for (const signal of extractedSignals) {
+                signals.push({
+                    signal_type: signal.signal_type,
+                    evidence_text: signal.evidence_text,
+                    source_label: signal.source_label,
+                    signal_date: signal.signal_date || new Date().toISOString().split('T')[0],
+                    confidence: signal.confidence,
+                    extraction_method: 'ai_extracted',
+                })
+            }
+        }
+
+        console.log(`[Enricher] Completed enrichment for ${profile.company_number}. Signals found: ${signals.length}`)
+        return { company, signals }
+    } catch (error) {
+        console.error(`[Enricher] Error enriching company ${profile.company_number}:`, error)
+        return null
+    }
 }
 
 /**

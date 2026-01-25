@@ -59,6 +59,7 @@ export async function searchCompanies(
 
     try {
         const url = `${BASE_URL}/search/companies?q=${encodeURIComponent(query)}&items_per_page=${limit}`
+        console.log(`[CompaniesHouse] Searching: ${url.replace(process.env.COMPANIES_HOUSE_API_KEY, 'REDACTED')}`)
 
         const response = await fetch(url, {
             headers: {
@@ -68,10 +69,18 @@ export async function searchCompanies(
 
         if (!response.ok) {
             console.error('Companies House API error:', response.status, await response.text())
+            // Log headers for debugging (excluding auth)
+            const headers: Record<string, string> = {}
+            response.headers.forEach((val, key) => {
+                if (key.toLowerCase() !== 'authorization') headers[key] = val
+            })
+            console.error('Response headers:', headers)
             return null
         }
 
-        return await response.json()
+        const data = await response.json()
+        console.log(`[CompaniesHouse] Found ${(data as any).items?.length || 0} items`)
+        return data as CompaniesHouseSearchResult
     } catch (error) {
         console.error('Error searching Companies House:', error)
         return null
