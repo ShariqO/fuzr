@@ -82,7 +82,8 @@ async function enrichCompanyData(
         const sizeBand = estimateSizeBand(profile.company_type)
 
         // Build description
-        const description = `${profile.company_name} is a ${profile.company_type.replace(/-/g, ' ')} registered in the UK. Industry classification: ${industry}.`
+        const typeStr = profile.company_type ? profile.company_type.replace(/-/g, ' ') : 'company'
+        const description = `${profile.company_name} is a ${typeStr} registered in the UK. Industry classification: ${industry}.`
 
         // Generate embedding for the company description
         console.log(`[Enricher] Generating embedding for ${profile.company_number}`)

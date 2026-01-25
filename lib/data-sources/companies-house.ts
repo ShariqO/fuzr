@@ -166,7 +166,9 @@ export function mapSicCodesToIndustry(sicCodes: string[] | undefined): string {
  * Estimate company size from company type and other signals
  * Note: Companies House doesn't provide employee count directly
  */
-export function estimateSizeBand(companyType: string): string {
+export function estimateSizeBand(companyType: string | undefined): string {
+    if (!companyType) return '1-50'
+
     // Very rough heuristic - in production you'd use additional data sources
     const largeTypes = ['plc', 'public-limited-company']
     const mediumTypes = ['ltd', 'private-limited-guarant-nsc-limited-exemption', 'private-limited-guarant-nsc']
