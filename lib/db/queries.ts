@@ -207,13 +207,13 @@ export async function getRecommendationsWithCompanies(
 export async function findCompanyByNumber(
     supabase: SupabaseClientAny,
     companyNumber: string
-): Promise<{ id: string } | null> {
+): Promise<{ id: string; name: string } | null> {
     const { data, error } = await supabase
         .from('companies')
-        .select('id')
+        .select('id, name')
         .eq('company_number', companyNumber)
         .single()
 
     if (error && error.code !== 'PGRST116') throw error
-    return data as { id: string } | null
+    return data as { id: string; name: string } | null
 }

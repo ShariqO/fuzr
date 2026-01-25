@@ -167,22 +167,19 @@ export function mapSicCodesToIndustry(sicCodes: string[] | undefined): string {
  * Note: Companies House doesn't provide employee count directly
  */
 export function estimateSizeBand(companyType: string | undefined): string {
-    if (!companyType) return '1-50'
+    if (!companyType) return 'N/A'
 
-    // Very rough heuristic - in production you'd use additional data sources
-    const largeTypes = ['plc', 'public-limited-company']
-    const mediumTypes = ['ltd', 'private-limited-guarant-nsc-limited-exemption', 'private-limited-guarant-nsc']
-
+    // Only estimate for PLCs which are typically larger
+    // For everything else, we don't have reliable data
     const type = companyType.toLowerCase()
 
-    if (largeTypes.some(t => type.includes(t))) {
-        return '1001-5000'
-    }
-    if (mediumTypes.some(t => type.includes(t))) {
-        return '51-200'
+    if (type.includes('plc') || type.includes('public-limited-company')) {
+        return '1000+'
     }
 
-    return '1-50'
+    // Companies House doesn't provide employee counts
+    // Return N/A instead of guessing incorrectly
+    return 'N/A'
 }
 
 /**

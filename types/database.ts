@@ -153,6 +153,28 @@ export interface Database {
                     created_at?: string
                 }
             }
+            watched_companies: {
+                Row: {
+                    id: string
+                    user_id: string
+                    company_id: string
+                    added_at: string
+                    notes: string | null
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    company_id: string
+                    added_at?: string
+                    notes?: string | null
+                }
+                Update: {
+                    user_id?: string
+                    company_id?: string
+                    added_at?: string
+                    notes?: string | null
+                }
+            }
         }
         Views: {
             [_ in never]: never

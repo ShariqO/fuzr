@@ -17,7 +17,16 @@ export default function DashboardPage() {
     const [showSearch, setShowSearch] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [searching, setSearching] = useState(false)
-    const [searchResults, setSearchResults] = useState<{ name: string, signals_count: number }[]>([])
+    const [searchResults, setSearchResults] = useState<{
+        company_number: string
+        name: string
+        status: string
+        type: string
+        date_of_creation: string
+        address_snippet: string
+        added?: boolean
+        adding?: boolean
+    }[]>([])
 
     // Filters
     const [industryFilter, setIndustryFilter] = useState('')
@@ -109,7 +118,7 @@ export default function DashboardPage() {
         setSearchResults([])
 
         try {
-            const response = await fetch('/api/companies/search', {
+            const response = await fetch('/api/companies/preview', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query: searchQuery }),
@@ -123,12 +132,44 @@ export default function DashboardPage() {
 
             setSearchResults(data.companies || [])
             if (data.companies?.length === 0) {
-                setError('No companies found matching your search')
+                setError('No active companies found matching your search')
             }
         } catch (err: any) {
             setError(err.message)
         } finally {
             setSearching(false)
+        }
+    }
+
+    const handleAddCompany = async (companyNumber: string) => {
+        // Mark as adding
+        setSearchResults(prev => prev.map(c =>
+            c.company_number === companyNumber ? { ...c, adding: true } : c
+        ))
+
+        try {
+            const response = await fetch('/api/companies/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ company_number: companyNumber }),
+            })
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to add company')
+            }
+
+            // Mark as added
+            setSearchResults(prev => prev.map(c =>
+                c.company_number === companyNumber ? { ...c, adding: false, added: true } : c
+            ))
+        } catch (err: any) {
+            // Reset adding state on error
+            setSearchResults(prev => prev.map(c =>
+                c.company_number === companyNumber ? { ...c, adding: false } : c
+            ))
+            setError(err.message)
         }
     }
 
@@ -173,6 +214,12 @@ export default function DashboardPage() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">FUZR</h1>
                     <div className="flex gap-4">
+                        <button
+                            onClick={() => router.push('/watched')}
+                            className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white font-medium"
+                        >
+                            👀 Watched
+                        </button>
                         <button
                             onClick={() => router.push('/onboarding')}
                             className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
@@ -406,19 +453,46 @@ export default function DashboardPage() {
 
                         {searchResults.length > 0 && (
                             <div className="mb-4">
-                                <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">Results</h4>
-                                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
-                                    {searchResults.map((company, idx) => (
-                                        <div key={idx} className="p-4 border-b border-gray-200 dark:border-gray-600 last:border-0 flex justify-between items-center">
-                                            <div>
-                                                <div className="font-medium text-gray-900 dark:text-white">{company.name}</div>
-                                                <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                    {company.signals_count} signals found
+                                <div className="flex justify-between items-center mb-2">
+                                    <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+                                        {searchResults.length} active companies found
+                                    </h4>
+                                </div>
+                                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg max-h-80 overflow-y-auto">
+                                    {searchResults.map((company) => (
+                                        <div key={company.company_number} className="p-4 border-b border-gray-200 dark:border-gray-600 last:border-0 flex justify-between items-center gap-4">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="font-medium text-gray-900 dark:text-white truncate">
+                                                    {company.name}
                                                 </div>
+                                                <div className="text-sm text-gray-500 dark:text-gray-400">
+                                                    {company.type?.replace(/-/g, ' ')} • Est. {company.date_of_creation}
+                                                </div>
+                                                {company.address_snippet && (
+                                                    <div className="text-xs text-gray-400 dark:text-gray-500 truncate">
+                                                        {company.address_snippet}
+                                                    </div>
+                                                )}
                                             </div>
-                                            <span className="text-green-600 dark:text-green-400 text-sm font-medium">
-                                                Added to DB
-                                            </span>
+                                            {company.added ? (
+                                                <span className="text-green-600 dark:text-green-400 text-sm font-medium whitespace-nowrap">
+                                                    ✓ Added
+                                                </span>
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleAddCompany(company.company_number)}
+                                                    disabled={company.adding}
+                                                    className="bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap flex items-center gap-1"
+                                                >
+                                                    {company.adding ? (
+                                                        'Adding...'
+                                                    ) : (
+                                                        <>
+                                                            <span className="text-lg leading-none">+</span> Add
+                                                        </>
+                                                    )}
+                                                </button>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -427,7 +501,7 @@ export default function DashboardPage() {
                                         onClick={handleCloseSearch}
                                         className="text-primary-600 hover:text-primary-700 font-medium"
                                     >
-                                        Done & Refresh Recommendations
+                                        Done
                                     </button>
                                 </div>
                             </div>

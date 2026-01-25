@@ -43,12 +43,18 @@ export async function searchAndEnrichCompanies(
     query: string,
     limit: number = 10
 ): Promise<EnrichedCompany[]> {
-    const searchResults = await searchCompanies(query, limit)
+    const searchResults = await searchCompanies(query, limit * 2) // Fetch extra to account for filtering
     if (!searchResults?.items) return []
+
+    // Filter to only include active companies
+    const activeCompanies = searchResults.items.filter(
+        item => item.company_status === 'active'
+    )
+    console.log(`[Enricher] Filtered to ${activeCompanies.length} active companies from ${searchResults.items.length} total`)
 
     const enrichedCompanies: EnrichedCompany[] = []
 
-    for (const item of searchResults.items.slice(0, limit)) {
+    for (const item of activeCompanies.slice(0, limit)) {
         const profile = await getCompanyProfile(item.company_number)
         if (profile) {
             const enriched = await enrichCompanyData(profile)
@@ -90,9 +96,10 @@ async function enrichCompanyData(
         const embedding = await generateEmbedding(description)
 
         // Create base company object
+        // Note: Companies House doesn't provide actual company websites
         const company: CompanyInsert = {
             name: profile.company_name,
-            website: `https://find-and-update.company-information.service.gov.uk/company/${profile.company_number}`,
+            website: '', // Companies House doesn't provide actual website URLs
             industry,
             size_band: sizeBand,
             location_uk: location,
