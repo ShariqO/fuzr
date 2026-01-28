@@ -41,61 +41,80 @@ export async function POST(request: Request) {
 
         // Check if company already exists
         const existing = await findCompanyByNumber(supabase, company_number)
+        let companyId: string
+        let companyName: string
+        let signalsCount = 0
+        let alreadyExists = false
+
         if (existing) {
-            return NextResponse.json({
-                success: true,
-                company: {
-                    id: existing.id,
-                    name: existing.name,
-                    signals_count: 0, // Could query actual count
-                },
-                message: 'Company already exists in database',
-                already_exists: true,
-            })
+            companyId = existing.id
+            companyName = existing.name
+            alreadyExists = true
+        } else {
+            // Enrich and add the company
+            const enriched = await enrichCompanyFromCompaniesHouse(company_number)
+
+            if (!enriched) {
+                return NextResponse.json(
+                    { error: 'Failed to fetch company data from Companies House' },
+                    { status: 404 }
+                )
+            }
+
+            const { company, signals } = enriched
+
+            // Insert company
+            const inserted = await insertCompany(supabase, company)
+            companyId = inserted.id
+            companyName = company.name
+
+            // Insert signals if any
+            if (signals.length > 0) {
+                const signalsToInsert: Database['public']['Tables']['signals']['Insert'][] = signals.map(signal => ({
+                    company_id: companyId,
+                    signal_type: signal.signal_type,
+                    evidence_text: signal.evidence_text,
+                    source_label: signal.source_label,
+                    signal_date: signal.signal_date,
+                    confidence: signal.confidence,
+                    extraction_method: signal.extraction_method,
+                }))
+
+                await insertSignals(supabase, signalsToInsert)
+            }
+            signalsCount = signals.length
         }
 
-        // Enrich and add the company
-        const enriched = await enrichCompanyFromCompaniesHouse(company_number)
-
-        if (!enriched) {
-            return NextResponse.json(
-                { error: 'Failed to fetch company data from Companies House' },
-                { status: 404 }
-            )
-        }
-
-        const { company, signals } = enriched
-
-        // Insert company
-        const inserted = await insertCompany(supabase, company)
-        const companyId = inserted.id
-
-        // Insert signals if any
-        if (signals.length > 0) {
-            const signalsToInsert: Database['public']['Tables']['signals']['Insert'][] = signals.map(signal => ({
+        // Always add to user's watchlist
+        const { error: watchlistError } = await supabase
+            .from('watched_companies')
+            .upsert({
+                user_id: user.id,
                 company_id: companyId,
-                signal_type: signal.signal_type,
-                evidence_text: signal.evidence_text,
-                source_label: signal.source_label,
-                signal_date: signal.signal_date,
-                confidence: signal.confidence,
-                extraction_method: signal.extraction_method,
-            }))
+            } as any, {
+                onConflict: 'user_id,company_id',
+            })
 
-            await insertSignals(supabase, signalsToInsert)
+        if (watchlistError) {
+            console.error(`[${requestId}] Error adding to watchlist:`, watchlistError)
+            // Don't fail the whole request, just log the error
+        } else {
+            console.log(`[${requestId}] Added ${companyName} to user's watchlist`)
         }
 
-        console.log(`[${requestId}] Added company ${company.name} with ${signals.length} signals`)
+        console.log(`[${requestId}] Added company ${companyName} with ${signalsCount} signals`)
 
         return NextResponse.json({
             success: true,
             company: {
                 id: companyId,
-                name: company.name,
-                signals_count: signals.length,
+                name: companyName,
+                signals_count: signalsCount,
             },
-            message: `Added ${company.name} to database`,
-            already_exists: false,
+            message: alreadyExists
+                ? `Added ${companyName} to your watchlist`
+                : `Added ${companyName} to database and your watchlist`,
+            already_exists: alreadyExists,
         })
     } catch (error) {
         console.error(`[${requestId}] Error adding company:`, error)

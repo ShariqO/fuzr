@@ -218,7 +218,7 @@ export default function DashboardPage() {
                             onClick={() => router.push('/watched')}
                             className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white font-medium"
                         >
-                            👀 Watched
+                            Watched
                         </button>
                         <button
                             onClick={() => router.push('/onboarding')}
