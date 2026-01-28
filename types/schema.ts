@@ -11,9 +11,22 @@ export const ProfileSchema = z.object({
     typical_buyer_personas: z.array(z.string()).min(1, 'Select at least one buyer persona'),
     deal_size_min: z.number().nullable().optional(),
     deal_size_max: z.number().nullable().optional(),
+    // Employment status fields
+    employment_status: z.string().optional(),
+    employer_company_name: z.string().optional(),
+    employer_position: z.string().optional(),
 })
 
 export type ProfileFormData = z.infer<typeof ProfileSchema>
+
+export const EMPLOYMENT_STATUSES = [
+    'Self-Employed',
+    'Employed',
+    'Freelancer',
+    'Business Owner',
+    'Contractor',
+    'Looking for work',
+] as const
 
 export const SELLING_CATEGORIES = [
     'CRM',
@@ -69,3 +82,4 @@ export const ROLES = [
     'RevOps',
     'Other',
 ] as const
+

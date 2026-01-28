@@ -63,7 +63,10 @@ export async function extractSignalsFromText(
     companyName?: string
 ): Promise<ExtractionResponse | null> {
     const client = getOpenAIClient()
-    if (!client) return null
+    if (!client) {
+        console.log('[SignalExtractor] OpenAI client not available - check OPENAI_API_KEY')
+        return null
+    }
 
     try {
         const userPrompt = companyName

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { ProfileSchema, SELLING_CATEGORIES, INDUSTRIES, SIZE_BANDS, BUYER_PERSONAS, ROLES } from '@/types/schema'
+import { ProfileSchema, SELLING_CATEGORIES, INDUSTRIES, SIZE_BANDS, BUYER_PERSONAS, ROLES, EMPLOYMENT_STATUSES } from '@/types/schema'
 import type { ProfileFormData } from '@/types/schema'
 import type { Profile } from '@/types/database'
 
@@ -26,6 +26,9 @@ export default function OnboardingPage() {
         typical_buyer_personas: [],
         deal_size_min: null,
         deal_size_max: null,
+        employment_status: '',
+        employer_company_name: '',
+        employer_position: '',
     })
 
     useEffect(() => {
@@ -59,6 +62,9 @@ export default function OnboardingPage() {
                     typical_buyer_personas: profile.typical_buyer_personas,
                     deal_size_min: profile.deal_size_min,
                     deal_size_max: profile.deal_size_max,
+                    employment_status: (profile as any).employment_status || '',
+                    employer_company_name: (profile as any).employer_company_name || '',
+                    employer_position: (profile as any).employer_position || '',
                 })
             }
 
@@ -159,6 +165,51 @@ export default function OnboardingPage() {
                             ))}
                         </select>
                     </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Employment Status
+                        </label>
+                        <select
+                            value={formData.employment_status || ''}
+                            onChange={(e) => setFormData({ ...formData, employment_status: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                        >
+                            <option value="">Select status...</option>
+                            {EMPLOYMENT_STATUSES.map(status => (
+                                <option key={status} value={status}>{status}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {formData.employment_status === 'Employed' && (
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Company Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.employer_company_name || ''}
+                                    onChange={(e) => setFormData({ ...formData, employer_company_name: e.target.value })}
+                                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                                    placeholder="Your employer"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Your Position
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.employer_position || ''}
+                                    onChange={(e) => setFormData({ ...formData, employer_position: e.target.value })}
+                                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                                    placeholder="Job title"
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

@@ -23,22 +23,25 @@ export async function fetchCompanyNews(
         // Google News RSS feed
         const query = encodeURIComponent(`"${companyName}" UK business`)
         const url = `https://news.google.com/rss/search?q=${query}&hl=en-GB&gl=GB&ceid=GB:en`
+        console.log(`[News] Fetching news for: ${companyName}`)
 
         const response = await fetch(url)
         if (!response.ok) {
-            console.error('News fetch error:', response.status)
+            console.error('[News] Fetch error:', response.status)
             return []
         }
 
         const xml = await response.text()
+        console.log(`[News] Response length: ${xml.length} bytes`)
         const articles = parseRSS(xml, limit)
+        console.log(`[News] Parsed ${articles.length} articles for ${companyName}`)
 
         return articles.map(article => ({
             ...article,
             source: 'Google News',
         }))
     } catch (error) {
-        console.error('Error fetching company news:', error)
+        console.error('[News] Error fetching company news:', error)
         return []
     }
 }

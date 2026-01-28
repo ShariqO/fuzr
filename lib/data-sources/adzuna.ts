@@ -53,23 +53,26 @@ export async function searchJobsByCompany(
     const appKey = process.env.ADZUNA_APP_KEY
 
     if (!appId || !appKey) {
-        console.warn('Adzuna credentials not set - skipping job search')
+        console.log('[Adzuna] Credentials not set - ADZUNA_APP_ID:', !!appId, 'ADZUNA_APP_KEY:', !!appKey)
         return null
     }
 
     try {
         const url = `${BASE_URL}/1?app_id=${appId}&app_key=${appKey}&results_per_page=${limit}&what_or=${encodeURIComponent(companyName)}&company=${encodeURIComponent(companyName)}`
+        console.log(`[Adzuna] Searching for jobs at: ${companyName}`)
 
         const response = await fetch(url)
 
         if (!response.ok) {
-            console.error('Adzuna API error:', response.status, await response.text())
+            console.error('[Adzuna] API error:', response.status, await response.text())
             return null
         }
 
-        return await response.json()
+        const data = await response.json()
+        console.log(`[Adzuna] Found ${data.count || 0} jobs for ${companyName}`)
+        return data
     } catch (error) {
-        console.error('Error searching Adzuna:', error)
+        console.error('[Adzuna] Error searching:', error)
         return null
     }
 }
