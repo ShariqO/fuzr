@@ -1,6 +1,13 @@
 /**
- * Company Enricher Pipeline
- * Orchestrates data fetching, AI processing, and embedding generation
+ * Company Enricher Pipeline (Enhanced)
+ * Orchestrates data fetching from all APIs, AI processing, and embedding generation
+ * 
+ * Data Sources:
+ * - Companies House (company profiles, SIC codes)
+ * - Adzuna (job postings, hiring signals)
+ * - NewsAPI / Google News (news articles, AI signal extraction)
+ * - FCA Register (regulatory status for financial companies)
+ * - Hunter.io (contacts - used separately in sales assistant)
  */
 
 import {
@@ -12,6 +19,8 @@ import {
 } from '../data-sources/companies-house'
 import { analyzeHiringSignals, createHiringSignal } from '../data-sources/adzuna'
 import { fetchNewsFromMultipleSources, getNewsTextForProcessing } from '../data-sources/news-feed'
+import { searchCompanyNews, getNewsForAIProcessing, isNewsAPIEnabled } from '../data-sources/newsapi'
+import { checkFCAStatus, searchFCAFirms, extractWebsiteFromFCA } from '../data-sources/fca-register'
 import { generateEmbedding } from '../ai/embeddings'
 import { extractSignalsFromMultipleTexts, type ExtractedSignal } from '../ai/signal-extractor'
 import type { Database } from '@/types/database'
@@ -68,7 +77,27 @@ export async function searchAndEnrichCompanies(
 }
 
 /**
+ * Try to find company website from multiple sources
+ */
+async function findCompanyWebsite(companyName: string, industry: string): Promise<string> {
+    // Try FCA Register first (for financial companies)
+    if (industry === 'Financial Services') {
+        const fcaFirms = await searchFCAFirms(companyName, 3)
+        const fcaWebsite = extractWebsiteFromFCA(fcaFirms)
+        if (fcaWebsite) {
+            console.log(`[Enricher] Found website from FCA: ${fcaWebsite}`)
+            return fcaWebsite
+        }
+    }
+
+    // For other companies, we could try to guess the domain
+    // But we'll leave it empty rather than guess incorrectly
+    return ''
+}
+
+/**
  * Full enrichment pipeline for a company
+ * Now uses all available APIs: Companies House, Adzuna, NewsAPI, FCA, Google News
  */
 async function enrichCompanyData(
     profile: CompaniesHouseCompany
@@ -87,6 +116,9 @@ async function enrichCompanyData(
         // Estimate size band (rough heuristic)
         const sizeBand = estimateSizeBand(profile.company_type)
 
+        // Try to find company website
+        const website = await findCompanyWebsite(profile.company_name, industry)
+
         // Build description
         const typeStr = profile.company_type ? profile.company_type.replace(/-/g, ' ') : 'company'
         const description = `${profile.company_name} is a ${typeStr} registered in the UK. Industry classification: ${industry}.`
@@ -96,10 +128,9 @@ async function enrichCompanyData(
         const embedding = await generateEmbedding(description)
 
         // Create base company object
-        // Note: Companies House doesn't provide actual company websites
         const company: CompanyInsert = {
             name: profile.company_name,
-            website: '', // Companies House doesn't provide actual website URLs
+            website,
             industry,
             size_band: sizeBand,
             location_uk: location,
@@ -112,7 +143,9 @@ async function enrichCompanyData(
             last_enriched_at: new Date().toISOString(),
         }
 
-        // Get hiring signals from Adzuna
+        // === SIGNAL COLLECTION FROM ALL SOURCES ===
+
+        // 1. Get hiring signals from Adzuna
         console.log(`[Enricher] Fetching hiring signals for ${profile.company_name}`)
         const hiringAnalysis = await analyzeHiringSignals(profile.company_name)
         if (hiringAnalysis) {
@@ -129,14 +162,59 @@ async function enrichCompanyData(
             }
         }
 
-        // Get news and extract signals
+        // 2. Get FCA regulatory signals (for financial companies)
+        if (industry === 'Financial Services') {
+            console.log(`[Enricher] Checking FCA status for ${profile.company_name}`)
+            const fcaStatus = await checkFCAStatus(profile.company_name)
+            if (fcaStatus.isRegulated && fcaStatus.signals.length > 0) {
+                for (const signal of fcaStatus.signals) {
+                    signals.push({
+                        signal_type: signal.type,
+                        evidence_text: signal.text,
+                        source_label: 'FCA Register',
+                        signal_date: new Date().toISOString().split('T')[0],
+                        confidence: signal.confidence,
+                        extraction_method: 'api',
+                    })
+                }
+            }
+        }
+
+        // 3. Get news from multiple sources and extract signals
         console.log(`[Enricher] Fetching news for ${profile.company_name}`)
-        const news = await fetchNewsFromMultipleSources(profile.company_name)
-        if (news.length > 0) {
-            console.log(`[Enricher] Found ${news.length} articles, extracting signals...`)
-            const newsTexts = getNewsTextForProcessing(news)
+
+        // Collect news from both sources
+        const allNewsTexts: Array<{ text: string; source: string }> = []
+
+        // Try NewsAPI first (better coverage if available)
+        if (isNewsAPIEnabled()) {
+            const newsApiArticles = await searchCompanyNews(profile.company_name, {
+                includeIndustryNews: true,
+                industry,
+                daysBack: 60,
+            })
+            const newsApiTexts = getNewsForAIProcessing(newsApiArticles)
+            allNewsTexts.push(...newsApiTexts.map(n => ({ text: n.text, source: n.source })))
+        }
+
+        // Also get Google News RSS as backup/supplement
+        const googleNews = await fetchNewsFromMultipleSources(profile.company_name)
+        const googleNewsTexts = getNewsTextForProcessing(googleNews)
+        allNewsTexts.push(...googleNewsTexts)
+
+        // Deduplicate by first 100 chars of text
+        const seenTexts = new Set<string>()
+        const uniqueNewsTexts = allNewsTexts.filter(n => {
+            const key = n.text.slice(0, 100).toLowerCase()
+            if (seenTexts.has(key)) return false
+            seenTexts.add(key)
+            return true
+        })
+
+        if (uniqueNewsTexts.length > 0) {
+            console.log(`[Enricher] Found ${uniqueNewsTexts.length} unique articles, extracting signals...`)
             const extractedSignals = await extractSignalsFromMultipleTexts(
-                newsTexts,
+                uniqueNewsTexts,
                 profile.company_name
             )
 
@@ -161,15 +239,16 @@ async function enrichCompanyData(
 }
 
 /**
- * Refresh signals for an existing company
+ * Refresh signals for an existing company (uses all APIs)
  */
 export async function refreshCompanySignals(
     companyName: string,
-    companyId: string
+    companyId: string,
+    industry?: string
 ): Promise<Omit<SignalInsert, 'company_id'>[]> {
     const signals: Omit<SignalInsert, 'company_id'>[] = []
 
-    // Refresh hiring signals
+    // 1. Refresh hiring signals
     const hiringAnalysis = await analyzeHiringSignals(companyName)
     if (hiringAnalysis) {
         const hiringSignal = createHiringSignal(hiringAnalysis)
@@ -185,12 +264,43 @@ export async function refreshCompanySignals(
         }
     }
 
-    // Refresh news signals
-    const news = await fetchNewsFromMultipleSources(companyName)
-    if (news.length > 0) {
-        const newsTexts = getNewsTextForProcessing(news)
+    // 2. Check FCA status if financial services
+    if (industry === 'Financial Services') {
+        const fcaStatus = await checkFCAStatus(companyName)
+        if (fcaStatus.isRegulated && fcaStatus.signals.length > 0) {
+            for (const signal of fcaStatus.signals) {
+                signals.push({
+                    signal_type: signal.type,
+                    evidence_text: signal.text,
+                    source_label: 'FCA Register',
+                    signal_date: new Date().toISOString().split('T')[0],
+                    confidence: signal.confidence,
+                    extraction_method: 'api',
+                })
+            }
+        }
+    }
+
+    // 3. Refresh news signals from all sources
+    const allNewsTexts: Array<{ text: string; source: string }> = []
+
+    if (isNewsAPIEnabled()) {
+        const newsApiArticles = await searchCompanyNews(companyName, {
+            includeIndustryNews: true,
+            industry,
+            daysBack: 30,
+        })
+        const newsApiTexts = getNewsForAIProcessing(newsApiArticles)
+        allNewsTexts.push(...newsApiTexts.map(n => ({ text: n.text, source: n.source })))
+    }
+
+    const googleNews = await fetchNewsFromMultipleSources(companyName)
+    const googleNewsTexts = getNewsTextForProcessing(googleNews)
+    allNewsTexts.push(...googleNewsTexts)
+
+    if (allNewsTexts.length > 0) {
         const extractedSignals = await extractSignalsFromMultipleTexts(
-            newsTexts,
+            allNewsTexts,
             companyName
         )
 
@@ -207,4 +317,47 @@ export async function refreshCompanySignals(
     }
 
     return signals
+}
+
+/**
+ * Lightweight enrichment (skip some expensive operations)
+ * Used for bulk seeding to conserve API quotas
+ */
+export async function enrichCompanyLightweight(
+    profile: CompaniesHouseCompany
+): Promise<EnrichedCompany | null> {
+    console.log(`[Enricher-Lite] Processing: ${profile.company_name}`)
+
+    try {
+        const address = profile.registered_office_address
+        const location = address?.locality || address?.region || 'UK'
+        const industry = mapSicCodesToIndustry(profile.sic_codes)
+        const sizeBand = estimateSizeBand(profile.company_type)
+
+        const typeStr = profile.company_type ? profile.company_type.replace(/-/g, ' ') : 'company'
+        const description = `${profile.company_name} is a ${typeStr} registered in the UK. Industry classification: ${industry}.`
+
+        // Generate embedding (relatively cheap)
+        const embedding = await generateEmbedding(description)
+
+        const company: CompanyInsert = {
+            name: profile.company_name,
+            website: '',
+            industry,
+            size_band: sizeBand,
+            location_uk: location,
+            description,
+            embedding: embedding || undefined,
+            data_source: 'companies_house',
+            company_number: profile.company_number,
+            sic_codes: profile.sic_codes,
+            incorporation_date: profile.date_of_creation,
+            last_enriched_at: new Date().toISOString(),
+        }
+
+        return { company, signals: [] }
+    } catch (error) {
+        console.error(`[Enricher-Lite] Error: ${profile.company_number}:`, error)
+        return null
+    }
 }

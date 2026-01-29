@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import type { RecommendationWithCompany } from '@/types/database'
+import { DashboardLayout, PageHeader, Card, CardContent, Button, Modal } from '@/components'
 
 export default function DashboardPage() {
     const router = useRouter()
@@ -109,6 +110,7 @@ export default function DashboardPage() {
         a.href = url
         a.download = `fuzr-recommendations-${new Date().toISOString().split('T')[0]}.csv`
         a.click()
+        URL.revokeObjectURL(url)
     }
 
     const handleSearch = async () => {
@@ -142,7 +144,6 @@ export default function DashboardPage() {
     }
 
     const handleAddCompany = async (companyNumber: string) => {
-        // Mark as adding
         setSearchResults(prev => prev.map(c =>
             c.company_number === companyNumber ? { ...c, adding: true } : c
         ))
@@ -160,12 +161,10 @@ export default function DashboardPage() {
                 throw new Error(data.error || 'Failed to add company')
             }
 
-            // Mark as added
             setSearchResults(prev => prev.map(c =>
                 c.company_number === companyNumber ? { ...c, adding: false, added: true } : c
             ))
         } catch (err: any) {
-            // Reset adding state on error
             setSearchResults(prev => prev.map(c =>
                 c.company_number === companyNumber ? { ...c, adding: false } : c
             ))
@@ -178,7 +177,6 @@ export default function DashboardPage() {
         setSearchQuery('')
         setSearchResults([])
         setError('')
-        // Reload recommendations to show newly added companies if any
         loadRecommendations()
     }
 
@@ -191,324 +189,310 @@ export default function DashboardPage() {
         })
     }
 
-    const handleSignOut = async () => {
-        await supabase.auth.signOut()
-        router.push('/')
-    }
-
     const industries = Array.from(new Set(recommendations.map(r => r.companies.industry)))
     const sizes = Array.from(new Set(recommendations.map(r => r.companies.size_band)))
     const filtered = getFilteredRecommendations()
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-lg">Loading...</div>
-            </div>
+            <DashboardLayout>
+                <div className="flex items-center justify-center min-h-[400px]">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+                        <span className="text-gray-500 dark:text-gray-400">Loading recommendations...</span>
+                    </div>
+                </div>
+            </DashboardLayout>
         )
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-            <nav className="bg-white dark:bg-gray-800 shadow">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">FUZR</h1>
-                    <div className="flex gap-4">
-                        <button
-                            onClick={() => router.push('/watched')}
-                            className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white font-medium"
-                        >
-                            Watched
-                        </button>
-                        <button
-                            onClick={() => router.push('/onboarding')}
-                            className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-                        >
-                            Edit Profile
-                        </button>
-                        <button
-                            onClick={handleSignOut}
-                            className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-                        >
-                            Sign Out
-                        </button>
-                    </div>
-                </div>
-            </nav>
-
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="mb-8">
-                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-                        Your Recommendations
-                    </h2>
-
-                    <div className="flex gap-4 mb-6">
-                        <button
-                            onClick={handleGenerate}
-                            disabled={generating}
-                            className="bg-primary-600 hover:bg-primary-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {generating ? 'Generating...' : '🎯 Generate Recommendations'}
-                        </button>
-
-                        <button
+        <DashboardLayout>
+            <PageHeader
+                title="Your Recommendations"
+                description="AI-powered prospects ranked by fit and buying signals"
+                actions={
+                    <div className="flex gap-3">
+                        <Button
+                            variant="secondary"
                             onClick={() => setShowSearch(true)}
-                            className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold px-6 py-3 rounded-lg transition-colors"
                         >
                             🔍 Search Companies
-                        </button>
-
-                        {recommendations.length > 0 && (
-                            <button
-                                onClick={handleExportCSV}
-                                className="border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold px-6 py-3 rounded-lg transition-colors"
-                            >
-                                📥 Download CSV
-                            </button>
-                        )}
+                        </Button>
+                        <Button
+                            onClick={handleGenerate}
+                            isLoading={generating}
+                        >
+                            {generating ? 'Generating...' : '✨ Generate Recommendations'}
+                        </Button>
                     </div>
+                }
+            />
 
-                    {error && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-                            {error}
-                        </div>
-                    )}
-
-                    {recommendations.length > 0 && (
-                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
-                            <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Filters</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Industry
-                                    </label>
-                                    <select
-                                        value={industryFilter}
-                                        onChange={(e) => setIndustryFilter(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
-                                    >
-                                        <option value="">All Industries</option>
-                                        {industries.map(ind => (
-                                            <option key={ind} value={ind}>{ind}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Company Size
-                                    </label>
-                                    <select
-                                        value={sizeFilter}
-                                        onChange={(e) => setSizeFilter(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
-                                    >
-                                        <option value="">All Sizes</option>
-                                        {sizes.map(size => (
-                                            <option key={size} value={size}>{size}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Min Confidence: {confidenceFilter}%
-                                    </label>
-                                    <input
-                                        type="range"
-                                        min="0"
-                                        max="100"
-                                        value={confidenceFilter}
-                                        onChange={(e) => setConfidenceFilter(Number(e.target.value))}
-                                        className="w-full"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    )}
+            {error && (
+                <div className="mb-6 p-4 rounded-xl bg-error-50 dark:bg-error-500/10 border border-error-200 dark:border-error-500/20 text-error-600 dark:text-error-400 animate-fade-in">
+                    {error}
                 </div>
+            )}
 
-                {recommendations.length === 0 ? (
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
-                        <div className="text-6xl mb-4">🎯</div>
+            {/* Stats Cards */}
+            {recommendations.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    <Card>
+                        <CardContent className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                                <span className="text-2xl">📊</span>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Total Prospects</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">{recommendations.length}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardContent className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-success-50 dark:bg-success-500/20 flex items-center justify-center">
+                                <span className="text-2xl">🎯</span>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">High Confidence</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                                    {recommendations.filter(r => r.confidence >= 0.7).length}
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardContent className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-warning-50 dark:bg-warning-500/20 flex items-center justify-center">
+                                <span className="text-2xl">🏢</span>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Industries</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">{industries.length}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {/* Filters */}
+            {recommendations.length > 0 && (
+                <Card className="mb-6">
+                    <CardContent>
+                        <div className="flex flex-wrap items-center gap-4">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Filters:</span>
+                            <select
+                                value={industryFilter}
+                                onChange={(e) => setIndustryFilter(e.target.value)}
+                                className="select text-sm py-2"
+                            >
+                                <option value="">All Industries</option>
+                                {industries.map(ind => (
+                                    <option key={ind} value={ind}>{ind}</option>
+                                ))}
+                            </select>
+                            <select
+                                value={sizeFilter}
+                                onChange={(e) => setSizeFilter(e.target.value)}
+                                className="select text-sm py-2"
+                            >
+                                <option value="">All Sizes</option>
+                                {sizes.map(size => (
+                                    <option key={size} value={size}>{size}</option>
+                                ))}
+                            </select>
+                            <select
+                                value={confidenceFilter}
+                                onChange={(e) => setConfidenceFilter(Number(e.target.value))}
+                                className="select text-sm py-2"
+                            >
+                                <option value={0}>Any Confidence</option>
+                                <option value={0.5}>50%+</option>
+                                <option value={0.7}>70%+</option>
+                                <option value={0.9}>90%+</option>
+                            </select>
+                            {(industryFilter || sizeFilter || confidenceFilter > 0) && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => { setIndustryFilter(''); setSizeFilter(''); setConfidenceFilter(0); }}
+                                >
+                                    Clear filters
+                                </Button>
+                            )}
+                            <div className="flex-1" />
+                            {filtered.length > 0 && (
+                                <Button variant="outline" size="sm" onClick={handleExportCSV}>
+                                    📥 Export Results as CSV
+                                </Button>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Empty State */}
+            {recommendations.length === 0 && (
+                <Card className="text-center py-16">
+                    <CardContent>
+                        <div className="text-6xl mb-4">🚀</div>
                         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                             No recommendations yet
                         </h3>
-                        <p className="text-gray-600 dark:text-gray-400 mb-6">
-                            Click &quot;Generate Recommendations&quot; to get your top 20 prospects
+                        <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
+                            Search for companies to add to your database, then generate AI-powered recommendations
                         </p>
-                    </div>
-                ) : (
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                                <thead className="bg-gray-50 dark:bg-gray-700">
-                                    <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Company
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Industry
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Size
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Location
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Confidence
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Score
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Actions
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                    {filtered.map((rec) => (
-                                        <tr key={rec.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                    {rec.companies.name}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                                {rec.companies.industry}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                                {rec.companies.size_band}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                                {rec.companies.location_uk}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${rec.confidence >= 80 ? 'bg-green-100 text-green-800' :
-                                                    rec.confidence >= 60 ? 'bg-yellow-100 text-yellow-800' :
-                                                        'bg-gray-100 text-gray-800'
-                                                    }`}>
-                                                    {rec.confidence}%
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
-                                                {rec.score}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                <button
-                                                    onClick={() => router.push(`/company/${rec.company_id}`)}
-                                                    className="text-primary-600 hover:text-primary-900 font-medium"
-                                                >
-                                                    View Details →
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                        <div className="flex gap-3 justify-center">
+                            <Button variant="secondary" onClick={() => setShowSearch(true)}>
+                                🔍 Search Companies
+                            </Button>
+                            <Button onClick={handleGenerate} isLoading={generating}>
+                                ✨ Generate Recommendations
+                            </Button>
                         </div>
+                    </CardContent>
+                </Card>
+            )}
 
-                        {filtered.length === 0 && recommendations.length > 0 && (
-                            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-                                No recommendations match your filters
-                            </div>
-                        )}
+            {/* Recommendations Table */}
+            {recommendations.length > 0 && (
+                <Card>
+                    <div className="overflow-x-auto">
+                        <table className="table-modern">
+                            <thead>
+                                <tr>
+                                    <th>Company</th>
+                                    <th>Industry</th>
+                                    <th>Size</th>
+                                    <th>Confidence</th>
+                                    <th>Score</th>
+                                    <th>Top Reason</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filtered.map((rec) => (
+                                    <tr key={rec.id} className="group cursor-pointer" onClick={() => router.push(`/company/${rec.company_id}`)}>
+                                        <td>
+                                            <div className="font-medium text-gray-900 dark:text-white">{rec.companies.name}</div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">{rec.companies.location_uk}</div>
+                                        </td>
+                                        <td>{rec.companies.industry}</td>
+                                        <td>{rec.companies.size_band}</td>
+                                        <td>
+                                            <span className={`badge ${rec.confidence >= 0.7 ? 'badge-success' : rec.confidence >= 0.5 ? 'badge-warning' : 'badge-primary'}`}>
+                                                {Math.round(rec.confidence * 100)}%
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-16 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-primary-500 rounded-full transition-all duration-300"
+                                                        style={{ width: `${Math.round(rec.score * 100)}%` }}
+                                                    />
+                                                </div>
+                                                <span className="text-xs text-gray-500">{Math.round(rec.score * 100)}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span className="text-gray-600 dark:text-gray-400 line-clamp-1">
+                                                {rec.explanation_json.reasons[0] || '-'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={(e) => { e.stopPropagation(); router.push(`/company/${rec.company_id}`); }}
+                                            >
+                                                View →
+                                            </Button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
-                )}
-            </main>
+
+                    {filtered.length === 0 && recommendations.length > 0 && (
+                        <div className="p-12 text-center text-gray-500 dark:text-gray-400">
+                            No recommendations match your filters
+                        </div>
+                    )}
+                </Card>
+            )}
 
             {/* Search Modal */}
-            {showSearch && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full p-6">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Search Companies</h3>
-                            <button
-                                onClick={handleCloseSearch}
-                                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                            >
-                                ✕
-                            </button>
-                        </div>
-
-                        <div className="flex gap-2 mb-6">
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                                placeholder="Enter company name..."
-                                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
-                                autoFocus
-                            />
-                            <button
-                                onClick={handleSearch}
-                                disabled={searching || !searchQuery.trim()}
-                                className="bg-primary-600 hover:bg-primary-700 text-white font-semibold px-6 py-2 rounded-lg transition-colors disabled:opacity-50"
-                            >
-                                {searching ? 'Searching...' : 'Search'}
-                            </button>
-                        </div>
-
-                        {searchResults.length > 0 && (
-                            <div className="mb-4">
-                                <div className="flex justify-between items-center mb-2">
-                                    <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400">
-                                        {searchResults.length} active companies found
-                                    </h4>
-                                </div>
-                                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg max-h-80 overflow-y-auto">
-                                    {searchResults.map((company) => (
-                                        <div key={company.company_number} className="p-4 border-b border-gray-200 dark:border-gray-600 last:border-0 flex justify-between items-center gap-4">
-                                            <div className="flex-1 min-w-0">
-                                                <div className="font-medium text-gray-900 dark:text-white truncate">
-                                                    {company.name}
-                                                </div>
-                                                <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                    {company.type?.replace(/-/g, ' ')} • Est. {company.date_of_creation}
-                                                </div>
-                                                {company.address_snippet && (
-                                                    <div className="text-xs text-gray-400 dark:text-gray-500 truncate">
-                                                        {company.address_snippet}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            {company.added ? (
-                                                <span className="text-green-600 dark:text-green-400 text-sm font-medium whitespace-nowrap">
-                                                    ✓ Added
-                                                </span>
-                                            ) : (
-                                                <button
-                                                    onClick={() => handleAddCompany(company.company_number)}
-                                                    disabled={company.adding}
-                                                    className="bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap flex items-center gap-1"
-                                                >
-                                                    {company.adding ? (
-                                                        'Adding...'
-                                                    ) : (
-                                                        <>
-                                                            <span className="text-lg leading-none">+</span> Add
-                                                        </>
-                                                    )}
-                                                </button>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="mt-4 text-center">
-                                    <button
-                                        onClick={handleCloseSearch}
-                                        className="text-primary-600 hover:text-primary-700 font-medium"
-                                    >
-                                        Done
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+            <Modal
+                isOpen={showSearch}
+                onClose={handleCloseSearch}
+                title="Search Companies"
+                description="Search UK Companies House to find and add prospects"
+            >
+                <div className="flex gap-2 mb-4">
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                        placeholder="Enter company name..."
+                        className="input flex-1"
+                        autoFocus
+                    />
+                    <Button
+                        onClick={handleSearch}
+                        disabled={searching || !searchQuery.trim()}
+                        isLoading={searching}
+                    >
+                        Search
+                    </Button>
                 </div>
-            )}
-        </div>
+
+                {searchResults.length > 0 && (
+                    <div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                            {searchResults.length} active companies found
+                        </p>
+                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl max-h-80 overflow-y-auto divide-y divide-gray-200 dark:divide-gray-700">
+                            {searchResults.map((company) => (
+                                <div key={company.company_number} className="p-4 flex justify-between items-center gap-4">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-medium text-gray-900 dark:text-white truncate">
+                                            {company.name}
+                                        </div>
+                                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                                            {company.type?.replace(/-/g, ' ')} • Est. {company.date_of_creation}
+                                        </div>
+                                        {company.address_snippet && (
+                                            <div className="text-xs text-gray-400 dark:text-gray-500 truncate">
+                                                {company.address_snippet}
+                                            </div>
+                                        )}
+                                    </div>
+                                    {company.added ? (
+                                        <span className="badge badge-success">✓ Added</span>
+                                    ) : (
+                                        <Button
+                                            size="sm"
+                                            onClick={() => handleAddCompany(company.company_number)}
+                                            isLoading={company.adding}
+                                        >
+                                            + Add
+                                        </Button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        <div className="mt-4 text-center">
+                            <Button variant="ghost" onClick={handleCloseSearch}>
+                                Done
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </Modal>
+        </DashboardLayout>
     )
 }

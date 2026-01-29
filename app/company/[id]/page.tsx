@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useParams } from 'next/navigation'
 import type { Company, Signal, Recommendation } from '@/types/database'
+import { DashboardLayout, PageHeader, Card, CardContent, Button, Modal } from '@/components'
 
 export default function CompanyDetailPage() {
     const router = useRouter()
@@ -16,6 +17,7 @@ export default function CompanyDetailPage() {
     const [signals, setSignals] = useState<Signal[]>([])
     const [recommendation, setRecommendation] = useState<Recommendation | null>(null)
     const [error, setError] = useState('')
+    const [showExportModal, setShowExportModal] = useState(false)
 
     useEffect(() => {
         async function loadCompanyData() {
@@ -25,7 +27,6 @@ export default function CompanyDetailPage() {
                 return
             }
 
-            // Load company
             const { data: companyData, error: companyError } = await supabase
                 .from('companies')
                 .select('*')
@@ -40,7 +41,6 @@ export default function CompanyDetailPage() {
 
             setCompany(companyData)
 
-            // Load signals
             const { data: signalsData } = await supabase
                 .from('signals')
                 .select('*')
@@ -49,7 +49,6 @@ export default function CompanyDetailPage() {
 
             setSignals(signalsData || [])
 
-            // Load recommendation
             const { data: recData } = await supabase
                 .from('recommendations')
                 .select('*')
@@ -65,229 +64,334 @@ export default function CompanyDetailPage() {
     }, [supabase, router, companyId])
 
     const handleExportJSON = () => {
-        if (!company || !recommendation) return
+        if (!company) return
 
         const exportData = {
             company: {
                 name: company.name,
+                company_number: company.company_number,
                 website: company.website,
                 industry: company.industry,
-                size: company.size_band,
+                size_band: company.size_band,
                 location: company.location_uk,
                 description: company.description,
+                sic_codes: company.sic_codes,
+                incorporation_date: company.incorporation_date,
+                last_enriched_at: company.last_enriched_at,
             },
-            recommendation: {
+            recommendation: recommendation ? {
                 score: recommendation.score,
                 confidence: recommendation.confidence,
                 pitch_angle: recommendation.explanation_json.pitch_angle,
-                why_match: recommendation.explanation_json.reasons,
+                reasons: recommendation.explanation_json.reasons,
+                matched_fields: recommendation.explanation_json.matched_fields,
                 scoring_breakdown: recommendation.explanation_json.scoring_breakdown,
-            },
+            } : null,
             signals: signals.map(s => ({
                 type: s.signal_type,
                 evidence: s.evidence_text,
                 source: s.source_label,
                 date: s.signal_date,
+                confidence: s.confidence,
+                extraction_method: s.extraction_method,
             })),
-            exported_at: new Date().toISOString(),
+            metadata: {
+                exported_at: new Date().toISOString(),
+                total_signals: signals.length,
+                source: 'FUZR Sales Intelligence',
+            },
         }
 
         const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `${company.name.toLowerCase().replace(/\s+/g, '-')}-fuzr.json`
+        a.download = `${company.name.toLowerCase().replace(/\s+/g, '-')}-metrics.json`
         a.click()
+        URL.revokeObjectURL(url)
+        setShowExportModal(false)
+    }
+
+    const handleExportCSV = () => {
+        if (!company) return
+
+        const rows: string[][] = []
+
+        rows.push(['COMPANY INFORMATION', ''])
+        rows.push(['Name', company.name])
+        rows.push(['Company Number', company.company_number || ''])
+        rows.push(['Industry', company.industry])
+        rows.push(['Size Band', company.size_band])
+        rows.push(['Location', company.location_uk])
+        rows.push(['Website', company.website])
+        rows.push(['Description', company.description])
+        rows.push(['SIC Codes', company.sic_codes?.join(', ') || ''])
+        rows.push(['Incorporated', company.incorporation_date || ''])
+        rows.push(['Last Updated', company.last_enriched_at || ''])
+        rows.push(['', ''])
+
+        if (recommendation) {
+            rows.push(['RECOMMENDATION SCORE', ''])
+            rows.push(['Overall Score', `${Math.round(recommendation.score * 100)}%`])
+            rows.push(['Confidence', `${Math.round(recommendation.confidence * 100)}%`])
+            rows.push(['Pitch Angle', recommendation.explanation_json.pitch_angle || ''])
+            rows.push(['Match Reasons', recommendation.explanation_json.reasons.join('; ')])
+            rows.push(['', ''])
+        }
+
+        if (signals.length > 0) {
+            rows.push(['SIGNALS', '', '', ''])
+            rows.push(['Signal Type', 'Evidence', 'Source', 'Date'])
+            signals.forEach(s => {
+                rows.push([s.signal_type, s.evidence_text.replace(/"/g, '""'), s.source_label, s.signal_date])
+            })
+        }
+
+        const csvContent = rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
+        const blob = new Blob([csvContent], { type: 'text/csv' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${company.name.toLowerCase().replace(/\s+/g, '-')}-metrics.csv`
+        a.click()
+        URL.revokeObjectURL(url)
+        setShowExportModal(false)
     }
 
     const getRecencyBadge = (signalDate: string) => {
         const daysAgo = Math.floor((Date.now() - new Date(signalDate).getTime()) / (1000 * 60 * 60 * 24))
 
         if (daysAgo <= 30) {
-            return <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">New</span>
+            return <span className="badge badge-success">New</span>
         } else if (daysAgo <= 90) {
-            return <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Recent</span>
+            return <span className="badge badge-primary">Recent</span>
         }
         return null
     }
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-lg">Loading...</div>
-            </div>
+            <DashboardLayout>
+                <div className="flex items-center justify-center min-h-[400px]">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+                        <span className="text-gray-500 dark:text-gray-400">Loading company data...</span>
+                    </div>
+                </div>
+            </DashboardLayout>
         )
     }
 
     if (error || !company) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="text-red-600 text-lg mb-4">{error || 'Company not found'}</div>
-                    <button
-                        onClick={() => router.push('/dashboard')}
-                        className="text-primary-600 hover:text-primary-700"
-                    >
-                        ← Back to Dashboard
-                    </button>
+            <DashboardLayout>
+                <div className="flex items-center justify-center min-h-[400px]">
+                    <Card className="text-center py-12 px-8">
+                        <CardContent>
+                            <div className="text-4xl mb-4">🔍</div>
+                            <p className="text-error-600 dark:text-error-400 mb-4">{error || 'Company not found'}</p>
+                            <Button variant="secondary" onClick={() => router.push('/dashboard')}>
+                                ← Back to Dashboard
+                            </Button>
+                        </CardContent>
+                    </Card>
                 </div>
-            </div>
+            </DashboardLayout>
         )
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-            <nav className="bg-white dark:bg-gray-800 shadow">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                    <button
-                        onClick={() => router.push('/dashboard')}
-                        className="text-primary-600 hover:text-primary-700 font-medium"
-                    >
-                        ← Back to Dashboard
-                    </button>
-                </div>
-            </nav>
+        <DashboardLayout>
+            <PageHeader
+                title={company.name}
+                description={
+                    <div className="flex flex-wrap gap-3 text-sm">
+                        <span className="text-gray-500 dark:text-gray-400">🏢 {company.industry}</span>
+                        <span className="text-gray-500 dark:text-gray-400">👥 {company.size_band}</span>
+                        <span className="text-gray-500 dark:text-gray-400">📍 {company.location_uk}</span>
+                    </div>
+                }
+                breadcrumbs={[
+                    { label: 'Dashboard', href: '/dashboard' },
+                    { label: company.name },
+                ]}
+                actions={
+                    <Button onClick={() => setShowExportModal(true)}>
+                        📊 Export Metrics
+                    </Button>
+                }
+            />
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 mb-6">
-                    <div className="flex justify-between items-start mb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                {/* Company Info Card */}
+                <Card className="lg:col-span-2">
+                    <CardContent>
+                        <h3 className="font-semibold text-gray-900 dark:text-white mb-3">About</h3>
+                        <p className="text-gray-600 dark:text-gray-400 mb-4">{company.description}</p>
+                        {company.website && (
+                            <a
+                                href={company.website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary-600 hover:text-primary-700 text-sm inline-flex items-center gap-1"
+                            >
+                                🔗 {company.website}
+                            </a>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Quick Stats */}
+                <Card>
+                    <CardContent className="space-y-4">
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                                {company.name}
-                            </h1>
-                            <div className="flex gap-4 text-sm text-gray-600 dark:text-gray-400">
-                                <span>🏢 {company.industry}</span>
-                                <span>👥 {company.size_band}</span>
-                                <span>📍 {company.location_uk}</span>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Signals Detected</p>
+                            <p className="text-2xl font-bold text-gray-900 dark:text-white">{signals.length}</p>
+                        </div>
+                        {recommendation && (
+                            <>
+                                <div>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">Match Score</p>
+                                    <p className="text-2xl font-bold text-primary-600">{Math.round(recommendation.score * 100)}%</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">Confidence</p>
+                                    <p className="text-2xl font-bold text-success-600">{Math.round(recommendation.confidence * 100)}%</p>
+                                </div>
+                            </>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Recommendation Details */}
+            {recommendation && (
+                <Card className="mb-6">
+                    <CardContent>
+                        <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Why This Company?</h3>
+
+                        {recommendation.explanation_json.pitch_angle && (
+                            <div className="p-4 rounded-xl bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 mb-4">
+                                <p className="text-sm font-medium text-primary-700 dark:text-primary-300 mb-1">Pitch Angle</p>
+                                <p className="text-gray-700 dark:text-gray-300">{recommendation.explanation_json.pitch_angle}</p>
+                            </div>
+                        )}
+
+                        <div className="mb-4">
+                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Match Reasons</p>
+                            <div className="flex flex-wrap gap-2">
+                                {recommendation.explanation_json.reasons.map((reason, idx) => (
+                                    <span key={idx} className="badge badge-primary">
+                                        {reason}
+                                    </span>
+                                ))}
                             </div>
                         </div>
-                        <button
-                            onClick={handleExportJSON}
-                            className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium"
-                        >
-                            📄 Export JSON
-                        </button>
-                    </div>
 
-                    <div className="mb-6">
-                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">About</h3>
-                        <p className="text-gray-700 dark:text-gray-300">{company.description}</p>
-                        <a
-                            href={company.website}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary-600 hover:text-primary-700 text-sm mt-2 inline-block"
-                        >
-                            Visit website →
-                        </a>
-                    </div>
-
-                    {recommendation && (
-                        <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-                            <div className="flex items-center gap-4 mb-4">
+                        {recommendation.explanation_json.matched_fields && (
+                            Object.values(recommendation.explanation_json.matched_fields).some(arr => arr && arr.length > 0) && (
                                 <div>
-                                    <div className="text-sm text-gray-600 dark:text-gray-400">Match Score</div>
-                                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                                        {recommendation.score}/100
+                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Matched Fields</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {recommendation.explanation_json.matched_fields.industries?.map((field, idx) => (
+                                            <span key={`ind-${idx}`} className="badge bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                                                {field}
+                                            </span>
+                                        ))}
+                                        {recommendation.explanation_json.matched_fields.size_bands?.map((field, idx) => (
+                                            <span key={`size-${idx}`} className="badge bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                                                {field}
+                                            </span>
+                                        ))}
+                                        {recommendation.explanation_json.matched_fields.personas?.map((field, idx) => (
+                                            <span key={`pers-${idx}`} className="badge bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                                                {field}
+                                            </span>
+                                        ))}
                                     </div>
                                 </div>
-                                <div>
-                                    <div className="text-sm text-gray-600 dark:text-gray-400">Confidence</div>
-                                    <div className="text-2xl font-bold text-primary-600">
-                                        {recommendation.confidence}%
-                                    </div>
-                                </div>
-                            </div>
+                            )
+                        )}
+                    </CardContent>
+                </Card>
+            )}
 
-                            {recommendation.explanation_json.pitch_angle && (
-                                <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg p-4 mb-4">
-                                    <div className="text-sm font-semibold text-primary-900 dark:text-primary-100 mb-1">
-                                        💡 Pitch Angle
-                                    </div>
-                                    <div className="text-primary-800 dark:text-primary-200">
-                                        {recommendation.explanation_json.pitch_angle}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                {recommendation && (
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 mb-6">
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                            Why This Match?
-                        </h2>
-                        <ul className="space-y-3">
-                            {recommendation.explanation_json.reasons.map((reason, idx) => (
-                                <li key={idx} className="flex items-start">
-                                    <span className="text-primary-600 mr-3 mt-1">✓</span>
-                                    <span className="text-gray-700 dark:text-gray-300">{reason}</span>
-                                </li>
-                            ))}
-                        </ul>
-
-                        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Scoring Breakdown</h3>
-                            <div className="grid grid-cols-3 gap-4 text-sm">
-                                <div>
-                                    <div className="text-gray-600 dark:text-gray-400">Base Fit</div>
-                                    <div className="font-semibold text-gray-900 dark:text-white">
-                                        {recommendation.explanation_json.scoring_breakdown.base_fit}
-                                    </div>
-                                </div>
-                                <div>
-                                    <div className="text-gray-600 dark:text-gray-400">Signal Boost</div>
-                                    <div className="font-semibold text-gray-900 dark:text-white">
-                                        {recommendation.explanation_json.scoring_breakdown.signal_boost}
-                                    </div>
-                                </div>
-                                <div>
-                                    <div className="text-gray-600 dark:text-gray-400">Total Score</div>
-                                    <div className="font-semibold text-gray-900 dark:text-white">
-                                        {recommendation.explanation_json.scoring_breakdown.total_score}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            {/* Signals */}
+            <Card>
+                <CardContent>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
                         Signals ({signals.length})
-                    </h2>
+                    </h3>
 
                     {signals.length === 0 ? (
-                        <p className="text-gray-500 dark:text-gray-400">No signals found for this company.</p>
+                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                            <div className="text-4xl mb-2">📡</div>
+                            <p>No signals found for this company</p>
+                        </div>
                     ) : (
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                             {signals.map((signal) => (
                                 <div
                                     key={signal.id}
-                                    className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                                    className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                                 >
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="flex items-center gap-2">
-                                            <h3 className="font-semibold text-gray-900 dark:text-white">
+                                            <span className="font-medium text-gray-900 dark:text-white">
                                                 {signal.signal_type}
-                                            </h3>
+                                            </span>
                                             {getRecencyBadge(signal.signal_date)}
                                         </div>
-                                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                                        <span className="text-sm text-gray-500 dark:text-gray-400">
                                             {new Date(signal.signal_date).toLocaleDateString()}
-                                        </div>
+                                        </span>
                                     </div>
-                                    <p className="text-gray-700 dark:text-gray-300 mb-2">{signal.evidence_text}</p>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{signal.evidence_text}</p>
+                                    <p className="text-xs text-gray-400 dark:text-gray-500">
                                         Source: {signal.source_label}
-                                    </div>
+                                    </p>
                                 </div>
                             ))}
                         </div>
                     )}
+                </CardContent>
+            </Card>
+
+            {/* Export Modal */}
+            <Modal
+                isOpen={showExportModal}
+                onClose={() => setShowExportModal(false)}
+                title={`Export ${company.name} Metrics`}
+                description="Choose your export format"
+            >
+                <div className="space-y-3 mt-4">
+                    <button
+                        onClick={handleExportJSON}
+                        className="w-full flex items-center gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
+                    >
+                        <div className="text-3xl">📋</div>
+                        <div>
+                            <div className="font-semibold text-gray-900 dark:text-white">JSON Format</div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                                Structured data for developers & integrations
+                            </div>
+                        </div>
+                    </button>
+
+                    <button
+                        onClick={handleExportCSV}
+                        className="w-full flex items-center gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
+                    >
+                        <div className="text-3xl">📊</div>
+                        <div>
+                            <div className="font-semibold text-gray-900 dark:text-white">CSV Format</div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                                Spreadsheet compatible for Excel & Google Sheets
+                            </div>
+                        </div>
+                    </button>
                 </div>
-            </main>
-        </div>
+            </Modal>
+        </DashboardLayout>
     )
 }

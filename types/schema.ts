@@ -58,6 +58,7 @@ export const INDUSTRIES = [
 ] as const
 
 export const SIZE_BANDS = [
+    'Any',
     '1-50',
     '51-200',
     '201-1000',

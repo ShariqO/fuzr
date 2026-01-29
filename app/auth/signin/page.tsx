@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Button, Card, CardContent } from '@/components'
 
 export default function SignInPage() {
     const [email, setEmail] = useState('')
@@ -32,68 +33,93 @@ export default function SignInPage() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 dark:from-gray-900 dark:to-gray-800 px-4">
-            <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-4">
+            {/* Background decoration */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary-500/10 rounded-full blur-3xl" />
+                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-primary-600/10 rounded-full blur-3xl" />
+            </div>
+
+            <div className="relative w-full max-w-md">
+                {/* Logo */}
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                        Welcome Back
-                    </h1>
-                    <p className="text-gray-600 dark:text-gray-400">
-                        Sign in to your FUZR account
-                    </p>
+                    <Link href="/" className="inline-flex items-center gap-2">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
+                            <span className="text-white font-bold text-lg">F</span>
+                        </div>
+                        <span className="text-2xl font-bold text-gray-900 dark:text-white">FUZR</span>
+                    </Link>
                 </div>
 
-                <form onSubmit={handleSignIn} className="space-y-6">
-                    {error && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                            {error}
+                <Card className="shadow-soft-lg">
+                    <CardContent className="p-8">
+                        <div className="text-center mb-8">
+                            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                                Welcome back
+                            </h1>
+                            <p className="text-gray-500 dark:text-gray-400">
+                                Sign in to your account to continue
+                            </p>
                         </div>
-                    )}
 
-                    <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Email
-                        </label>
-                        <input
-                            id="email"
-                            type="email"
-                            required
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                            placeholder="you@company.com"
-                        />
-                    </div>
+                        <form onSubmit={handleSignIn} className="space-y-5">
+                            {error && (
+                                <div className="p-4 rounded-xl bg-error-50 dark:bg-error-500/10 border border-error-200 dark:border-error-500/20 text-error-600 dark:text-error-400 text-sm animate-fade-in">
+                                    {error}
+                                </div>
+                            )}
 
-                    <div>
-                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Password
-                        </label>
-                        <input
-                            id="password"
-                            type="password"
-                            required
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                            placeholder="••••••••"
-                        />
-                    </div>
+                            <div>
+                                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Email address
+                                </label>
+                                <input
+                                    id="email"
+                                    type="email"
+                                    required
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="input"
+                                    placeholder="you@company.com"
+                                />
+                            </div>
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {loading ? 'Signing in...' : 'Sign In'}
-                    </button>
-                </form>
+                            <div>
+                                <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Password
+                                </label>
+                                <input
+                                    id="password"
+                                    type="password"
+                                    required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="input"
+                                    placeholder="••••••••"
+                                />
+                            </div>
 
-                <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
-                    Don&apos;t have an account?{' '}
-                    <Link href="/auth/signup" className="text-primary-600 hover:text-primary-700 font-medium">
-                        Sign up
-                    </Link>
+                            <Button
+                                type="submit"
+                                className="w-full"
+                                size="lg"
+                                isLoading={loading}
+                            >
+                                Sign In
+                            </Button>
+                        </form>
+
+                        <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                            Don&apos;t have an account?{' '}
+                            <Link href="/auth/signup" className="text-primary-600 hover:text-primary-700 font-medium">
+                                Sign up for free
+                            </Link>
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <p className="mt-8 text-center text-xs text-gray-400 dark:text-gray-500">
+                    By signing in, you agree to our Terms of Service and Privacy Policy
                 </p>
             </div>
         </div>

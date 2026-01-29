@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { DashboardLayout, PageHeader, Card, CardContent, Button } from '@/components'
 
 interface WatchedCompany {
     id: string
@@ -78,11 +79,6 @@ export default function WatchedPage() {
         }
     }
 
-    const handleSignOut = async () => {
-        await supabase.auth.signOut()
-        router.push('/')
-    }
-
     const formatDate = (dateString: string | null) => {
         if (!dateString) return 'Never'
         return new Date(dateString).toLocaleDateString('en-GB', {
@@ -94,149 +90,117 @@ export default function WatchedPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-lg">Loading...</div>
-            </div>
+            <DashboardLayout>
+                <div className="flex items-center justify-center min-h-[400px]">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+                        <span className="text-gray-500 dark:text-gray-400">Loading watchlist...</span>
+                    </div>
+                </div>
+            </DashboardLayout>
         )
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-            <nav className="bg-white dark:bg-gray-800 shadow">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">FUZR</h1>
-                    <div className="flex gap-4">
-                        <button
-                            onClick={() => router.push('/dashboard')}
-                            className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-                        >
-                            Dashboard
-                        </button>
-                        <button
-                            onClick={() => router.push('/onboarding')}
-                            className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-                        >
-                            Edit Profile
-                        </button>
-                        <button
-                            onClick={handleSignOut}
-                            className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-                        >
-                            Sign Out
-                        </button>
-                    </div>
+        <DashboardLayout>
+            <PageHeader
+                title="Watched Companies"
+                description="Track companies you're interested in and stay updated on their signals"
+                breadcrumbs={[
+                    { label: 'Dashboard', href: '/dashboard' },
+                    { label: 'Watched' },
+                ]}
+            />
+
+            {error && (
+                <div className="mb-6 p-4 rounded-xl bg-error-50 dark:bg-error-500/10 border border-error-200 dark:border-error-500/20 text-error-600 dark:text-error-400 animate-fade-in">
+                    {error}
                 </div>
-            </nav>
+            )}
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="mb-8">
-                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                        Companies to Watch
-                    </h2>
-                    <p className="text-gray-600 dark:text-gray-400">
-                        Track companies you&apos;re interested in and stay updated on their signals.
-                    </p>
-                </div>
-
-                {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-                        {error}
-                    </div>
-                )}
-
-                {watchlist.length === 0 ? (
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
-                        <div className="text-6xl mb-4">👀</div>
+            {watchlist.length === 0 ? (
+                <Card className="text-center py-16">
+                    <CardContent>
+                        <div className="text-6xl mb-4">📋</div>
                         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                             No companies in your watchlist
                         </h3>
-                        <p className="text-gray-600 dark:text-gray-400 mb-6">
-                            Search for companies and click the &quot;+&quot; button to add them to your watchlist.
+                        <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
+                            Search for companies and click the &quot;+&quot; button to add them to your watchlist
                         </p>
-                        <button
-                            onClick={() => router.push('/dashboard')}
-                            className="bg-primary-600 hover:bg-primary-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
-                        >
+                        <Button onClick={() => router.push('/dashboard')}>
                             Go to Dashboard
-                        </button>
-                    </div>
-                ) : (
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                                <thead className="bg-gray-50 dark:bg-gray-700">
-                                    <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Company
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Industry
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Signals
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Last Updated
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Added
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Actions
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                    {watchlist.map((watched) => (
-                                        <tr key={watched.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                    {watched.company.name}
-                                                </div>
-                                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                    {watched.company.location_uk}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                                {watched.company.industry}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${watched.company.signals_count > 0
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : 'bg-gray-100 text-gray-800'
-                                                    }`}>
-                                                    {watched.company.signals_count} signals
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                                {formatDate(watched.company.last_enriched_at)}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                                {formatDate(watched.added_at)}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm space-x-3">
-                                                <button
+                        </Button>
+                    </CardContent>
+                </Card>
+            ) : (
+                <Card>
+                    <div className="overflow-x-auto">
+                        <table className="table-modern">
+                            <thead>
+                                <tr>
+                                    <th>Company</th>
+                                    <th>Industry</th>
+                                    <th>Signals</th>
+                                    <th>Last Updated</th>
+                                    <th>Added</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {watchlist.map((watched) => (
+                                    <tr
+                                        key={watched.id}
+                                        className="cursor-pointer"
+                                        onClick={() => router.push(`/company/${watched.company.id}`)}
+                                    >
+                                        <td>
+                                            <div className="font-medium text-gray-900 dark:text-white">
+                                                {watched.company.name}
+                                            </div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                {watched.company.location_uk}
+                                            </div>
+                                        </td>
+                                        <td>{watched.company.industry}</td>
+                                        <td>
+                                            <span className={`badge ${watched.company.signals_count > 0 ? 'badge-success' : 'badge-primary'}`}>
+                                                {watched.company.signals_count} signals
+                                            </span>
+                                        </td>
+                                        <td className="text-gray-500 dark:text-gray-400">
+                                            {formatDate(watched.company.last_enriched_at)}
+                                        </td>
+                                        <td className="text-gray-500 dark:text-gray-400">
+                                            {formatDate(watched.added_at)}
+                                        </td>
+                                        <td>
+                                            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
                                                     onClick={() => router.push(`/company/${watched.company.id}`)}
-                                                    className="text-primary-600 hover:text-primary-900 font-medium"
                                                 >
                                                     View
-                                                </button>
-                                                <button
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
                                                     onClick={() => handleRemove(watched.company.id)}
                                                     disabled={removing === watched.company.id}
-                                                    className="text-red-600 hover:text-red-900 font-medium disabled:opacity-50"
+                                                    className="text-error-500 hover:text-error-600 hover:bg-error-50 dark:hover:bg-error-500/10"
                                                 >
                                                     {removing === watched.company.id ? 'Removing...' : 'Remove'}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                                </Button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
-                )}
-            </main>
-        </div>
+                </Card>
+            )}
+        </DashboardLayout>
     )
 }
