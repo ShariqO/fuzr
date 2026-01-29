@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useParams } from 'next/navigation'
 import type { Company, Signal, Recommendation } from '@/types/database'
-import { DashboardLayout, PageHeader, Card, CardContent, Button, Modal } from '@/components'
+import { DashboardLayout, PageHeader, Card, CardContent, Button, Modal, SalesAssistantChat } from '@/components'
 
 export default function CompanyDetailPage() {
     const router = useRouter()
@@ -392,6 +392,13 @@ export default function CompanyDetailPage() {
                     </button>
                 </div>
             </Modal>
+
+            {/* Sales Assistant Chat */}
+            <SalesAssistantChat
+                companyId={companyId}
+                companyName={company.name}
+                companyWebsite={company.website}
+            />
         </DashboardLayout>
     )
 }

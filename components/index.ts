@@ -9,3 +9,6 @@ export { DashboardLayout } from './layout/dashboard-layout'
 export { PageHeader } from './layout/page-header'
 export { Sidebar } from './layout/sidebar'
 export { TopNav } from './layout/top-nav'
+
+// Sales Assistant Components
+export { SalesAssistantChat } from './sales-assistant'
