@@ -120,6 +120,9 @@ export default function HomePage() {
             {/* Video Cards Section */}
             <section className="py-20 md:py-28 bg-white">
                 <div className="container-app">
+                    <h2 className="scroll-animate text-3xl md:text-4xl font-bold text-gray-900 text-center mb-16">
+                        What we do
+                    </h2>
                     <div className="grid md:grid-cols-3 gap-8">
                         {/* Card 1 */}
                         <div className="scroll-animate video-card delay-100">
@@ -184,6 +187,9 @@ export default function HomePage() {
             {/* How It Works / Explainable Intelligence */}
             <section id="how-it-works" className="py-20 md:py-28 bg-gray-50">
                 <div className="container-app">
+                    <h2 className="scroll-animate text-3xl md:text-4xl font-bold text-gray-900 text-center mb-16">
+                        How it works
+                    </h2>
                     <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
                         <div className="scroll-animate">
                             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
@@ -241,35 +247,31 @@ export default function HomePage() {
             {/* Email Capture Section */}
             <section className="py-20 md:py-28 bg-white">
                 <div className="container-app">
-                    <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-                        <div className="scroll-animate order-2 lg:order-1">
-                            <div className="relative">
-                                <Image
-                                    src="/images/Email.png"
-                                    alt="Stay updated"
-                                    width={500}
-                                    height={400}
-                                    className="w-full max-w-md mx-auto lg:mx-0 rounded-3xl"
-                                />
-                            </div>
-                        </div>
-                        <div className="scroll-animate delay-100 order-1 lg:order-2">
-                            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                                Stay in the loop
-                            </h2>
-                            <p className="text-gray-600 text-lg leading-relaxed mb-8">
-                                Get product updates, new features, and signal sources as we grow FUZR.
-                            </p>
-                            <form className="flex flex-col sm:flex-row gap-3 max-w-md" onSubmit={(e) => e.preventDefault()}>
-                                <input
-                                    type="email"
-                                    placeholder="Enter your email"
-                                    className="input flex-1"
-                                />
-                                <button type="submit" className="btn-primary px-6 py-3 whitespace-nowrap">
-                                    Stay updated
-                                </button>
-                            </form>
+                    <div className="scroll-animate flex flex-col items-center text-center max-w-2xl mx-auto">
+                        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                            Stay in the loop
+                        </h2>
+                        <p className="text-gray-600 text-lg leading-relaxed mb-8">
+                            Get product updates, new features,<br />and signal sources as we grow FUZR.
+                        </p>
+                        <form className="flex flex-col sm:flex-row gap-3 w-full max-w-md mb-12" onSubmit={(e) => e.preventDefault()}>
+                            <input
+                                type="email"
+                                placeholder="Enter your email"
+                                className="input flex-1"
+                            />
+                            <button type="submit" className="btn-primary px-6 py-3 whitespace-nowrap">
+                                Stay updated
+                            </button>
+                        </form>
+                        <div className="relative">
+                            <Image
+                                src="/images/Email.png"
+                                alt="Stay updated"
+                                width={400}
+                                height={320}
+                                className="w-full max-w-sm mx-auto rounded-3xl"
+                            />
                         </div>
                     </div>
                 </div>
@@ -278,7 +280,7 @@ export default function HomePage() {
             {/* Footer */}
             <footer className="py-12 bg-gray-50 border-t border-gray-100">
                 <div className="container-app">
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div className="flex flex-col items-center gap-6 text-center">
                         <div className="text-lg font-bold text-gray-900">
                             FUZR
                         </div>
@@ -296,7 +298,7 @@ export default function HomePage() {
                                 Terms
                             </Link>
                         </div>
-                        <p className="text-sm text-gray-500 text-center md:text-right">
+                        <p className="text-sm text-gray-500">
                             Built for sales teams who care about timing and context.
                         </p>
                     </div>
