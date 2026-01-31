@@ -198,8 +198,8 @@ export default function DashboardPage() {
             <DashboardLayout>
                 <div className="flex items-center justify-center min-h-[400px]">
                     <div className="flex flex-col items-center gap-4">
-                        <div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
-                        <span className="text-gray-500 dark:text-gray-400">Loading recommendations...</span>
+                        <div className="w-10 h-10 border-4 border-pink-200 border-t-pink-500 rounded-full animate-spin" />
+                        <span className="text-gray-500">Loading recommendations...</span>
                     </div>
                 </div>
             </DashboardLayout>
@@ -217,20 +217,23 @@ export default function DashboardPage() {
                             variant="secondary"
                             onClick={() => setShowSearch(true)}
                         >
-                            🔍 Search Companies
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            Search Companies
                         </Button>
                         <Button
                             onClick={handleGenerate}
                             isLoading={generating}
                         >
-                            {generating ? 'Generating...' : '✨ Generate Recommendations'}
+                            {generating ? 'Generating...' : 'Generate Recommendations'}
                         </Button>
                     </div>
                 }
             />
 
             {error && (
-                <div className="mb-6 p-4 rounded-xl bg-error-50 dark:bg-error-500/10 border border-error-200 dark:border-error-500/20 text-error-600 dark:text-error-400 animate-fade-in">
+                <div className="mb-6 p-4 rounded-2xl bg-error-50 border border-error-200 text-error-600 animate-fade-in">
                     {error}
                 </div>
             )}
@@ -240,23 +243,27 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                     <Card>
                         <CardContent className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-                                <span className="text-2xl">📊</span>
+                            <div className="w-12 h-12 rounded-2xl bg-pink-100 flex items-center justify-center">
+                                <svg className="w-6 h-6 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Total Prospects</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white">{recommendations.length}</p>
+                                <p className="text-sm text-gray-500">Total Prospects</p>
+                                <p className="text-2xl font-bold text-gray-900">{recommendations.length}</p>
                             </div>
                         </CardContent>
                     </Card>
                     <Card>
                         <CardContent className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-success-50 dark:bg-success-500/20 flex items-center justify-center">
-                                <span className="text-2xl">🎯</span>
+                            <div className="w-12 h-12 rounded-2xl bg-success-50 flex items-center justify-center">
+                                <svg className="w-6 h-6 text-success-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">High Confidence</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                                <p className="text-sm text-gray-500">High Confidence</p>
+                                <p className="text-2xl font-bold text-gray-900">
                                     {recommendations.filter(r => r.confidence >= 0.7).length}
                                 </p>
                             </div>
@@ -264,12 +271,14 @@ export default function DashboardPage() {
                     </Card>
                     <Card>
                         <CardContent className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-warning-50 dark:bg-warning-500/20 flex items-center justify-center">
-                                <span className="text-2xl">🏢</span>
+                            <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center">
+                                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Industries</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white">{industries.length}</p>
+                                <p className="text-sm text-gray-500">Industries</p>
+                                <p className="text-2xl font-bold text-gray-900">{industries.length}</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -281,7 +290,7 @@ export default function DashboardPage() {
                 <Card className="mb-6">
                     <CardContent>
                         <div className="flex flex-wrap items-center gap-4">
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Filters:</span>
+                            <span className="text-sm font-medium text-gray-700">Filters:</span>
                             <select
                                 value={industryFilter}
                                 onChange={(e) => setIndustryFilter(e.target.value)}
@@ -324,7 +333,10 @@ export default function DashboardPage() {
                             <div className="flex-1" />
                             {filtered.length > 0 && (
                                 <Button variant="outline" size="sm" onClick={handleExportCSV}>
-                                    📥 Export Results as CSV
+                                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                    Export CSV
                                 </Button>
                             )}
                         </div>
@@ -336,19 +348,26 @@ export default function DashboardPage() {
             {recommendations.length === 0 && (
                 <Card className="text-center py-16">
                     <CardContent>
-                        <div className="text-6xl mb-4">🚀</div>
-                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                        <div className="w-16 h-16 rounded-full bg-pink-100 flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
                             No recommendations yet
                         </h3>
-                        <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
+                        <p className="text-gray-500 mb-6 max-w-md mx-auto">
                             Search for companies to add to your database, then generate AI-powered recommendations
                         </p>
                         <div className="flex gap-3 justify-center">
                             <Button variant="secondary" onClick={() => setShowSearch(true)}>
-                                🔍 Search Companies
+                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                Search Companies
                             </Button>
                             <Button onClick={handleGenerate} isLoading={generating}>
-                                ✨ Generate Recommendations
+                                Generate Recommendations
                             </Button>
                         </div>
                     </CardContent>
@@ -375,8 +394,8 @@ export default function DashboardPage() {
                                 {filtered.map((rec) => (
                                     <tr key={rec.id} className="group cursor-pointer" onClick={() => router.push(`/company/${rec.company_id}`)}>
                                         <td>
-                                            <div className="font-medium text-gray-900 dark:text-white">{rec.companies.name}</div>
-                                            <div className="text-xs text-gray-500 dark:text-gray-400">{rec.companies.location_uk}</div>
+                                            <div className="font-medium text-gray-900">{rec.companies.name}</div>
+                                            <div className="text-xs text-gray-500">{rec.companies.location_uk}</div>
                                         </td>
                                         <td>{rec.companies.industry}</td>
                                         <td>{rec.companies.size_band}</td>
@@ -387,9 +406,9 @@ export default function DashboardPage() {
                                         </td>
                                         <td>
                                             <div className="flex items-center gap-2">
-                                                <div className="w-16 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
                                                     <div
-                                                        className="h-full bg-primary-500 rounded-full transition-all duration-300"
+                                                        className="h-full bg-pink-500 rounded-full transition-all duration-300"
                                                         style={{ width: `${Math.round(rec.score * 100)}%` }}
                                                     />
                                                 </div>
@@ -397,7 +416,7 @@ export default function DashboardPage() {
                                             </div>
                                         </td>
                                         <td>
-                                            <span className="text-gray-600 dark:text-gray-400 line-clamp-1">
+                                            <span className="text-gray-600 line-clamp-1">
                                                 {rec.explanation_json.reasons[0] || '-'}
                                             </span>
                                         </td>
@@ -407,7 +426,7 @@ export default function DashboardPage() {
                                                 size="sm"
                                                 onClick={(e) => { e.stopPropagation(); router.push(`/company/${rec.company_id}`); }}
                                             >
-                                                View →
+                                                View
                                             </Button>
                                         </td>
                                     </tr>
@@ -417,7 +436,7 @@ export default function DashboardPage() {
                     </div>
 
                     {filtered.length === 0 && recommendations.length > 0 && (
-                        <div className="p-12 text-center text-gray-500 dark:text-gray-400">
+                        <div className="p-12 text-center text-gray-500">
                             No recommendations match your filters
                         </div>
                     )}
@@ -452,34 +471,34 @@ export default function DashboardPage() {
 
                 {searchResults.length > 0 && (
                     <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                        <p className="text-sm text-gray-500 mb-3">
                             {searchResults.length} active companies found
                         </p>
-                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl max-h-80 overflow-y-auto divide-y divide-gray-200 dark:divide-gray-700">
+                        <div className="bg-gray-50 rounded-2xl max-h-80 overflow-y-auto divide-y divide-gray-200">
                             {searchResults.map((company) => (
                                 <div key={company.company_number} className="p-4 flex justify-between items-center gap-4">
                                     <div className="flex-1 min-w-0">
-                                        <div className="font-medium text-gray-900 dark:text-white truncate">
+                                        <div className="font-medium text-gray-900 truncate">
                                             {company.name}
                                         </div>
-                                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                                            {company.type?.replace(/-/g, ' ')} • Est. {company.date_of_creation}
+                                        <div className="text-sm text-gray-500">
+                                            {company.type?.replace(/-/g, ' ')} - Est. {company.date_of_creation}
                                         </div>
                                         {company.address_snippet && (
-                                            <div className="text-xs text-gray-400 dark:text-gray-500 truncate">
+                                            <div className="text-xs text-gray-400 truncate">
                                                 {company.address_snippet}
                                             </div>
                                         )}
                                     </div>
                                     {company.added ? (
-                                        <span className="badge badge-success">✓ Added</span>
+                                        <span className="badge badge-success">Added</span>
                                     ) : (
                                         <Button
                                             size="sm"
                                             onClick={() => handleAddCompany(company.company_number)}
                                             isLoading={company.adding}
                                         >
-                                            + Add
+                                            Add
                                         </Button>
                                     )}
                                 </div>

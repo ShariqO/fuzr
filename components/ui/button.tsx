@@ -12,10 +12,10 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ({ className, variant = 'primary', size = 'md', isLoading, children, disabled, ...props }, ref) => {
         const variants = {
-            primary: 'bg-primary-600 text-white hover:bg-primary-700 shadow-sm hover:shadow-md',
-            secondary: 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700',
-            ghost: 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100',
-            outline: 'border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800',
+            primary: 'bg-pink-500 text-white hover:bg-pink-600 shadow-sm hover:shadow-md',
+            secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200',
+            ghost: 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+            outline: 'border-2 border-gray-200 text-gray-700 hover:bg-gray-50',
             destructive: 'bg-error-500 text-white hover:bg-error-600 shadow-sm',
         }
 
@@ -29,8 +29,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             <button
                 ref={ref}
                 className={cn(
-                    'inline-flex items-center justify-center rounded-xl font-medium transition-all duration-200',
-                    'focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:ring-offset-2',
+                    'inline-flex items-center justify-center rounded-2xl font-semibold transition-all duration-200',
+                    'focus:outline-none focus:ring-2 focus:ring-pink-400/50 focus:ring-offset-2',
                     'disabled:opacity-50 disabled:cursor-not-allowed',
                     variants[variant],
                     sizes[size],

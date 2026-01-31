@@ -79,44 +79,41 @@ export default function SignUpPage() {
     const passwordChecks = getPasswordStrength()
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-4">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-soft px-4">
             {/* Background decoration */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary-500/10 rounded-full blur-3xl" />
-                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-primary-600/10 rounded-full blur-3xl" />
+                <div className="absolute -top-40 -right-40 w-80 h-80 bg-pink-200/30 rounded-full blur-3xl" />
+                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-200/30 rounded-full blur-3xl" />
             </div>
 
             <div className="relative w-full max-w-md">
                 {/* Logo */}
                 <div className="text-center mb-8">
-                    <Link href="/" className="inline-flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
-                            <span className="text-white font-bold text-lg">F</span>
-                        </div>
-                        <span className="text-2xl font-bold text-gray-900 dark:text-white">FUZR</span>
+                    <Link href="/" className="inline-block text-2xl font-bold text-gray-900">
+                        FUZR
                     </Link>
                 </div>
 
                 <Card className="shadow-soft-lg">
                     <CardContent className="p-8">
                         <div className="text-center mb-8">
-                            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                                Create your account
+                            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                                Create your FUZR account
                             </h1>
-                            <p className="text-gray-500 dark:text-gray-400">
+                            <p className="text-gray-500">
                                 Start finding your best-fit prospects
                             </p>
                         </div>
 
                         <form onSubmit={handleSignUp} className="space-y-5">
                             {error && (
-                                <div className="p-4 rounded-xl bg-error-50 dark:bg-error-500/10 border border-error-200 dark:border-error-500/20 text-error-600 dark:text-error-400 text-sm animate-fade-in">
+                                <div className="p-4 rounded-2xl bg-error-50 border border-error-200 text-error-600 text-sm animate-fade-in">
                                     {error}
                                 </div>
                             )}
 
                             <div>
-                                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                                     Email address
                                 </label>
                                 <input
@@ -131,7 +128,7 @@ export default function SignUpPage() {
                             </div>
 
                             <div>
-                                <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                                     Password
                                 </label>
                                 <input
@@ -141,17 +138,17 @@ export default function SignUpPage() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="input"
-                                    placeholder="••••••••"
+                                    placeholder="Create a password"
                                 />
 
                                 {/* Password requirements */}
                                 <div className="mt-3 space-y-1.5">
                                     {passwordChecks.map((check, idx) => (
                                         <div key={idx} className="flex items-center gap-2 text-xs">
-                                            <span className={check.met ? 'text-success-500' : 'text-gray-400 dark:text-gray-500'}>
+                                            <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${check.met ? 'bg-success-100 text-success-600' : 'bg-gray-100 text-gray-400'}`}>
                                                 {check.met ? '✓' : '○'}
                                             </span>
-                                            <span className={check.met ? 'text-success-600 dark:text-success-500' : 'text-gray-500 dark:text-gray-400'}>
+                                            <span className={check.met ? 'text-success-600' : 'text-gray-500'}>
                                                 {check.label}
                                             </span>
                                         </div>
@@ -169,16 +166,16 @@ export default function SignUpPage() {
                             </Button>
                         </form>
 
-                        <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                        <p className="mt-6 text-center text-sm text-gray-500">
                             Already have an account?{' '}
-                            <Link href="/auth/signin" className="text-primary-600 hover:text-primary-700 font-medium">
+                            <Link href="/auth/signin" className="text-pink-600 hover:text-pink-700 font-medium">
                                 Sign in
                             </Link>
                         </p>
                     </CardContent>
                 </Card>
 
-                <p className="mt-8 text-center text-xs text-gray-400 dark:text-gray-500">
+                <p className="mt-8 text-center text-xs text-gray-400">
                     By creating an account, you agree to our Terms of Service and Privacy Policy
                 </p>
             </div>
@@ -190,13 +187,17 @@ export default function SignUpPage() {
                 title="Check Your Email"
             >
                 <div className="text-center py-4">
-                    <div className="text-5xl mb-4">📧</div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-4">
-                        We&apos;ve sent a verification link to <strong className="text-gray-900 dark:text-white">{email}</strong>
+                    <div className="w-16 h-16 rounded-full bg-pink-100 flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-8 h-8 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <p className="text-gray-600 mb-4">
+                        We&apos;ve sent a verification link to <strong className="text-gray-900">{email}</strong>
                     </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                    <p className="text-sm text-gray-500 mb-6">
                         Please check your inbox and click the link to verify your account.
-                        <strong className="block mt-2 text-warning-600 dark:text-warning-500">
+                        <strong className="block mt-2 text-warning-600">
                             Don&apos;t forget to check your junk/spam folder!
                         </strong>
                     </p>

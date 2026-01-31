@@ -33,44 +33,41 @@ export default function SignInPage() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-4">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-soft px-4">
             {/* Background decoration */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary-500/10 rounded-full blur-3xl" />
-                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-primary-600/10 rounded-full blur-3xl" />
+                <div className="absolute -top-40 -right-40 w-80 h-80 bg-pink-200/30 rounded-full blur-3xl" />
+                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-200/30 rounded-full blur-3xl" />
             </div>
 
             <div className="relative w-full max-w-md">
                 {/* Logo */}
                 <div className="text-center mb-8">
-                    <Link href="/" className="inline-flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
-                            <span className="text-white font-bold text-lg">F</span>
-                        </div>
-                        <span className="text-2xl font-bold text-gray-900 dark:text-white">FUZR</span>
+                    <Link href="/" className="inline-block text-2xl font-bold text-gray-900">
+                        FUZR
                     </Link>
                 </div>
 
                 <Card className="shadow-soft-lg">
                     <CardContent className="p-8">
                         <div className="text-center mb-8">
-                            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                                Welcome back
+                            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                                Sign in to FUZR
                             </h1>
-                            <p className="text-gray-500 dark:text-gray-400">
-                                Sign in to your account to continue
+                            <p className="text-gray-500">
+                                Welcome back
                             </p>
                         </div>
 
                         <form onSubmit={handleSignIn} className="space-y-5">
                             {error && (
-                                <div className="p-4 rounded-xl bg-error-50 dark:bg-error-500/10 border border-error-200 dark:border-error-500/20 text-error-600 dark:text-error-400 text-sm animate-fade-in">
+                                <div className="p-4 rounded-2xl bg-error-50 border border-error-200 text-error-600 text-sm animate-fade-in">
                                     {error}
                                 </div>
                             )}
 
                             <div>
-                                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                                     Email address
                                 </label>
                                 <input
@@ -85,7 +82,7 @@ export default function SignInPage() {
                             </div>
 
                             <div>
-                                <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                                     Password
                                 </label>
                                 <input
@@ -95,7 +92,7 @@ export default function SignInPage() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="input"
-                                    placeholder="••••••••"
+                                    placeholder="Enter your password"
                                 />
                             </div>
 
@@ -109,16 +106,16 @@ export default function SignInPage() {
                             </Button>
                         </form>
 
-                        <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                        <p className="mt-6 text-center text-sm text-gray-500">
                             Don&apos;t have an account?{' '}
-                            <Link href="/auth/signup" className="text-primary-600 hover:text-primary-700 font-medium">
-                                Sign up for free
+                            <Link href="/auth/signup" className="text-pink-600 hover:text-pink-700 font-medium">
+                                Sign up
                             </Link>
                         </p>
                     </CardContent>
                 </Card>
 
-                <p className="mt-8 text-center text-xs text-gray-400 dark:text-gray-500">
+                <p className="mt-8 text-center text-xs text-gray-400">
                     By signing in, you agree to our Terms of Service and Privacy Policy
                 </p>
             </div>

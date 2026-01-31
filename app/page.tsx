@@ -1,182 +1,303 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function HomePage() {
+    const observerRef = useRef<IntersectionObserver | null>(null)
+
+    useEffect(() => {
+        // Check for reduced motion preference
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+        if (prefersReducedMotion) {
+            // If user prefers reduced motion, make all elements visible immediately
+            document.querySelectorAll('.scroll-animate').forEach(el => {
+                el.classList.add('visible')
+            })
+            return
+        }
+
+        observerRef.current = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible')
+                    }
+                })
+            },
+            { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+        )
+
+        document.querySelectorAll('.scroll-animate').forEach(el => {
+            observerRef.current?.observe(el)
+        })
+
+        return () => observerRef.current?.disconnect()
+    }, [])
+
     return (
-        <div className="min-h-screen bg-white dark:bg-gray-950">
+        <div className="min-h-screen bg-white">
             {/* Navigation */}
-            <nav className="absolute top-0 left-0 right-0 z-10">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex justify-between items-center">
-                    <Link href="/" className="flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                            <span className="text-white font-bold text-lg">F</span>
+            <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-gray-100">
+                <div className="container-app py-4 flex justify-between items-center">
+                    <div className="flex items-center gap-8">
+                        <Link href="/" className="text-xl font-bold text-gray-900">
+                            FUZR
+                        </Link>
+                        <div className="hidden md:flex items-center gap-6">
+                            <Link href="/" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                                Home
+                            </Link>
+                            <Link href="/platform" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                                Platform
+                            </Link>
                         </div>
-                        <span className="text-2xl font-bold text-white">FUZR</span>
-                    </Link>
+                    </div>
                     <div className="flex items-center gap-4">
                         <Link
                             href="/auth/signin"
-                            className="text-white/80 hover:text-white font-medium transition-colors"
+                            className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
                         >
                             Sign In
                         </Link>
                         <Link
                             href="/auth/signup"
-                            className="bg-white text-primary-600 px-5 py-2.5 rounded-xl font-semibold hover:bg-primary-50 transition-all shadow-lg shadow-primary-500/20"
+                            className="btn-primary px-5 py-2.5 text-sm"
                         >
-                            Get Started
+                            Sign Up
                         </Link>
                     </div>
                 </div>
             </nav>
 
             {/* Hero Section */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-primary-900">
-                {/* Background decorations */}
-                <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-400/30 rounded-full blur-3xl" />
-                    <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary-300/20 rounded-full blur-3xl" />
-                </div>
-
-                <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-24">
-                    <div className="text-center max-w-4xl mx-auto">
-                        <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-8">
-                            <span className="text-primary-200 text-sm font-medium">🚀 AI-Powered Sales Intelligence</span>
+            <section className="pt-32 pb-20 md:pt-40 md:pb-28 bg-gradient-soft overflow-hidden">
+                <div className="container-app">
+                    <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+                        {/* Text content */}
+                        <div className="animate-fade-in-up">
+                            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6">
+                                Turn signals into sales
+                            </h1>
+                            <p className="text-lg md:text-xl text-gray-600 leading-relaxed mb-8 max-w-xl">
+                                FUZR helps sales teams find companies that match their ICP and are ready to talk, using live signals and clear explanations.
+                            </p>
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <Link
+                                    href="/auth/signup"
+                                    className="btn-primary px-8 py-4 text-base"
+                                >
+                                    Get started
+                                </Link>
+                                <Link
+                                    href="#how-it-works"
+                                    className="btn-outline px-8 py-4 text-base"
+                                >
+                                    Learn more
+                                </Link>
+                            </div>
                         </div>
 
-                        <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white mb-6 tracking-tight leading-tight">
-                            Find Your Best-Fit
-                            <br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-200 to-white">
-                                Prospects
-                            </span>
-                        </h1>
-
-                        <p className="text-xl md:text-2xl text-primary-100 mb-10 max-w-2xl mx-auto leading-relaxed">
-                            FUZR identifies companies showing buying signals that match your ICP.
-                            Stop cold calling. Start warm conversations.
-                        </p>
-
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                            <Link
-                                href="/auth/signup"
-                                className="inline-flex items-center justify-center bg-white text-primary-700 px-8 py-4 rounded-xl font-bold text-lg hover:bg-primary-50 transition-all shadow-xl shadow-primary-900/30 hover:shadow-2xl hover:-translate-y-0.5"
-                            >
-                                Get Started Free →
-                            </Link>
-                            <Link
-                                href="/auth/signin"
-                                className="inline-flex items-center justify-center bg-white/10 backdrop-blur-sm text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-white/20 transition-all border border-white/20"
-                            >
-                                Sign In
-                            </Link>
+                        {/* Hero image */}
+                        <div className="relative animate-fade-in" style={{ animationDelay: '200ms' }}>
+                            <div className="relative rounded-3xl overflow-hidden shadow-soft-xl">
+                                <Image
+                                    src="/images/Hero.png"
+                                    alt="FUZR Dashboard"
+                                    width={800}
+                                    height={600}
+                                    className="w-full h-auto"
+                                    priority
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
+            </section>
 
-                {/* Wave divider */}
-                <div className="absolute bottom-0 left-0 right-0">
-                    <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
-                        <path d="M0 120L60 105C120 90 240 60 360 45C480 30 600 30 720 37.5C840 45 960 60 1080 67.5C1200 75 1320 75 1380 75L1440 75V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z" fill="white" className="dark:fill-gray-950" />
-                    </svg>
-                </div>
-            </div>
-
-            {/* How It Works */}
-            <div className="py-24 bg-white dark:bg-gray-950">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center mb-16">
-                        <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                            How FUZR Works
-                        </h2>
-                        <p className="text-xl text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
-                            Three simple steps to transform your sales pipeline
-                        </p>
-                    </div>
-
+            {/* Video Cards Section */}
+            <section className="py-20 md:py-28 bg-white">
+                <div className="container-app">
                     <div className="grid md:grid-cols-3 gap-8">
-                        {[
-                            { icon: '🎯', title: 'Define Your ICP', desc: 'Tell us what you\'re selling and who your ideal customers are. Industry, size, personas, and more.' },
-                            { icon: '🔍', title: 'AI Finds Signals', desc: 'Our engine analyzes companies for buying signals: hiring spikes, tech changes, expansions, and more.' },
-                            { icon: '📊', title: 'Get Ranked Prospects', desc: 'Receive your top prospects with confidence scores and specific reasons why now is the time to reach out.' },
-                        ].map((step, idx) => (
-                            <div key={idx} className="text-center group">
-                                <div className="w-20 h-20 rounded-2xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                                    <span className="text-4xl">{step.icon}</span>
+                        {/* Card 1 */}
+                        <div className="scroll-animate video-card delay-100">
+                            <video
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                                className="w-full aspect-video object-cover"
+                            >
+                                <source src="/videos/PainPoints.mp4" type="video/mp4" />
+                            </video>
+                            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                                Identify pain points
+                            </h3>
+                            <p className="text-gray-600 text-sm leading-relaxed">
+                                Find what your prospects are struggling with so your outreach speaks to real problems, not guesses.
+                            </p>
+                        </div>
+
+                        {/* Card 2 */}
+                        <div className="scroll-animate video-card delay-200">
+                            <video
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                                className="w-full aspect-video object-cover"
+                            >
+                                <source src="/videos/Scanning.mp4" type="video/mp4" />
+                            </video>
+                            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                                Spot buying signals
+                            </h3>
+                            <p className="text-gray-600 text-sm leading-relaxed">
+                                See hiring shifts, tech changes, and growth moves so you contact companies when the timing is right.
+                            </p>
+                        </div>
+
+                        {/* Card 3 */}
+                        <div className="scroll-animate video-card delay-300">
+                            <video
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                                className="w-full aspect-video object-cover"
+                            >
+                                <source src="/videos/DataExchange.mp4" type="video/mp4" />
+                            </video>
+                            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                                Personalize your outreach
+                            </h3>
+                            <p className="text-gray-600 text-sm leading-relaxed">
+                                Use clear reasons and context for every account so your messages feel relevant and build trust.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* How It Works / Explainable Intelligence */}
+            <section id="how-it-works" className="py-20 md:py-28 bg-gray-50">
+                <div className="container-app">
+                    <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+                        <div className="scroll-animate">
+                            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+                                Clear reasons behind every recommendation
+                            </h2>
+                            <p className="text-gray-600 text-lg leading-relaxed mb-8">
+                                FUZR scores companies against your ICP and surfaces why they showed up. You see the signals behind each suggestion, so you can decide how to act and what to say.
+                            </p>
+                            <ul className="space-y-4">
+                                <li className="flex items-start gap-3">
+                                    <span className="w-6 h-6 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center text-sm font-medium flex-shrink-0 mt-0.5">1</span>
+                                    <span className="text-gray-700">ICP match based on industry, size, and roles</span>
+                                </li>
+                                <li className="flex items-start gap-3">
+                                    <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-medium flex-shrink-0 mt-0.5">2</span>
+                                    <span className="text-gray-700">Live signals from hiring, tech, and company changes</span>
+                                </li>
+                                <li className="flex items-start gap-3">
+                                    <span className="w-6 h-6 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center text-sm font-medium flex-shrink-0 mt-0.5">3</span>
+                                    <span className="text-gray-700">Export-ready data for your CRM</span>
+                                </li>
+                            </ul>
+                        </div>
+                        <div className="scroll-animate delay-200">
+                            <div className="bg-white rounded-3xl p-8 shadow-card">
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                                        <div>
+                                            <div className="font-medium text-gray-900">Industry Match</div>
+                                            <div className="text-sm text-gray-500">Technology</div>
+                                        </div>
+                                        <div className="badge-primary">High</div>
+                                    </div>
+                                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                                        <div>
+                                            <div className="font-medium text-gray-900">Hiring Signal</div>
+                                            <div className="text-sm text-gray-500">+12 engineering roles</div>
+                                        </div>
+                                        <div className="badge-blue">Active</div>
+                                    </div>
+                                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                                        <div>
+                                            <div className="font-medium text-gray-900">Company Size</div>
+                                            <div className="text-sm text-gray-500">51-200 employees</div>
+                                        </div>
+                                        <div className="badge-success">Match</div>
+                                    </div>
                                 </div>
-                                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{step.title}</h3>
-                                <p className="text-gray-500 dark:text-gray-400">{step.desc}</p>
                             </div>
-                        ))}
+                        </div>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            {/* Features Grid */}
-            <div className="py-24 bg-gray-50 dark:bg-gray-900">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center mb-16">
-                        <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                            Explainable Intelligence
-                        </h2>
-                        <p className="text-xl text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
-                            No black box AI. Know exactly why each prospect is recommended.
-                        </p>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-6">
-                        {[
-                            { icon: '🎯', title: 'ICP-Matched Scoring', desc: 'Every recommendation is scored based on how well the company matches your target industries, size bands, and buyer personas.' },
-                            { icon: '📈', title: 'Real-Time Signals', desc: 'Track hiring spikes, tech migrations, compliance pressures, expansions, and vendor consolidation to time your outreach perfectly.' },
-                            { icon: '💡', title: 'Clear Reasoning', desc: 'Every prospect comes with specific, evidence-based reasons. You\'ll know exactly why they\'re a good fit.' },
-                            { icon: '📥', title: 'Export & Integrate', desc: 'Download recommendations as CSV for your CRM, or export detailed JSON summaries for each company.' },
-                        ].map((feature, idx) => (
-                            <div key={idx} className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-soft hover:shadow-soft-lg transition-all duration-300 border border-gray-100 dark:border-gray-700">
-                                <div className="text-3xl mb-4">{feature.icon}</div>
-                                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{feature.title}</h3>
-                                <p className="text-gray-500 dark:text-gray-400">{feature.desc}</p>
+            {/* Email Capture Section */}
+            <section className="py-20 md:py-28 bg-white">
+                <div className="container-app">
+                    <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+                        <div className="scroll-animate order-2 lg:order-1">
+                            <div className="relative">
+                                <Image
+                                    src="/images/Email.png"
+                                    alt="Stay updated"
+                                    width={500}
+                                    height={400}
+                                    className="w-full max-w-md mx-auto lg:mx-0 rounded-3xl"
+                                />
                             </div>
-                        ))}
+                        </div>
+                        <div className="scroll-animate delay-100 order-1 lg:order-2">
+                            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                                Stay in the loop
+                            </h2>
+                            <p className="text-gray-600 text-lg leading-relaxed mb-8">
+                                Get product updates, new features, and signal sources as we grow FUZR.
+                            </p>
+                            <form className="flex flex-col sm:flex-row gap-3 max-w-md" onSubmit={(e) => e.preventDefault()}>
+                                <input
+                                    type="email"
+                                    placeholder="Enter your email"
+                                    className="input flex-1"
+                                />
+                                <button type="submit" className="btn-primary px-6 py-3 whitespace-nowrap">
+                                    Stay updated
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
-            </div>
-
-            {/* CTA Section */}
-            <div className="relative py-24 bg-gradient-to-br from-primary-600 to-primary-800 overflow-hidden">
-                <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                    <div className="absolute top-0 right-0 w-96 h-96 bg-primary-400/30 rounded-full blur-3xl" />
-                    <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary-300/20 rounded-full blur-3xl" />
-                </div>
-
-                <div className="relative max-w-4xl mx-auto text-center px-4">
-                    <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-                        Ready to Transform Your Sales Pipeline?
-                    </h2>
-                    <p className="text-xl text-primary-100 mb-10 max-w-2xl mx-auto">
-                        Join sales teams who are closing more deals by reaching out at the right time with the right message.
-                    </p>
-                    <Link
-                        href="/auth/signup"
-                        className="inline-flex items-center justify-center bg-white text-primary-700 px-10 py-4 rounded-xl font-bold text-xl hover:bg-primary-50 transition-all shadow-xl shadow-primary-900/30 hover:shadow-2xl hover:-translate-y-0.5"
-                    >
-                        Start Free Today →
-                    </Link>
-                </div>
-            </div>
+            </section>
 
             {/* Footer */}
-            <footer className="bg-gray-900 py-12">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <footer className="py-12 bg-gray-50 border-t border-gray-100">
+                <div className="container-app">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
-                                <span className="text-white font-bold text-sm">F</span>
-                            </div>
-                            <span className="text-xl font-bold text-white">FUZR</span>
+                        <div className="text-lg font-bold text-gray-900">
+                            FUZR
                         </div>
-                        <p className="text-gray-400 text-sm">
-                            © 2026 FUZR. Built for modern sales teams.
+                        <div className="flex flex-wrap justify-center gap-6 text-sm">
+                            <Link href="/" className="text-gray-600 hover:text-gray-900 transition-colors">
+                                Home
+                            </Link>
+                            <Link href="/platform" className="text-gray-600 hover:text-gray-900 transition-colors">
+                                Platform
+                            </Link>
+                            <Link href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+                                Privacy
+                            </Link>
+                            <Link href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+                                Terms
+                            </Link>
+                        </div>
+                        <p className="text-sm text-gray-500 text-center md:text-right">
+                            Built for sales teams who care about timing and context.
                         </p>
                     </div>
                 </div>
