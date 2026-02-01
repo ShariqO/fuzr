@@ -1,0 +1,96 @@
+Category,Specific Criteria,Where to Find
+Hiring Velocity,Total number of open positions,"LinkedIn Jobs, company careers page, Indeed, Greenhouse"
+,"Open roles in relevant departments (IT, Data, Analytics, Sales, Marketing, Ops)","LinkedIn Jobs, company careers page"
+,Roles specifically related to your solution area,"Job boards, Boolean searches on LinkedIn"
+,Growth rate of headcount over time,"LinkedIn headcount graphs, ZoomInfo growth signals"
+,Hiring freezes or layoffs announced,"News, Layoffs.fyi, Blind, TechCrunch"
+,Recent spikes in hiring (expansion signals),"LinkedIn headcount tracking, job aggregators"
+,Backfill vs net new positions,LinkedIn job change tracking
+,Speed of role posting to filling,Job board date tracking
+Department Composition,"Size of each department (Sales, Marketing, Eng, Ops, Finance, HR)",LinkedIn employee search by department
+,Department growth rates over time,LinkedIn historical headcount
+,Ratio of technical to non-technical staff,LinkedIn filters
+,Geographic distribution of teams,LinkedIn location filters
+,Remote vs in-office vs hybrid workforce,"Job postings, LinkedIn, company policies"
+,Contractor/consultant vs FTE ratio,LinkedIn employment type
+,Span of control (managers per IC),LinkedIn org structure analysis
+Key Role Indicators,New VP/C-level hires in last 90 days,"LinkedIn job changes, press releases"
+,"First-time role creations (new CRO, CMO, etc.)","LinkedIn, company announcements"
+,Backfilled executive positions,"LinkedIn job changes, news"
+,Newly created departments/functions,"Org announcements, LinkedIn patterns"
+,"""Head of"" roles emerging",LinkedIn title searches
+,"Revenue-critical roles (Sales, Customer Success)","LinkedIn, job postings"
+,Specialist vs generalist hiring patterns,Job description analysis
+Skill Gaps,Skills mentioned in job descriptions,Job postings text analysis
+,Certifications required/preferred,Job postings
+,Tools/technologies they're hiring for,Job descriptions
+,Seniority levels hiring (junior vs senior signals),Job posting levels
+,"Urgency indicators in postings (""immediate,"" ""ASAP"")",Job description language
+,Skills missing from current team,Gap between job reqs and employee profiles
+,Consulting engagements posted,"RFPs, consulting firm case studies"
+Employee Sentiment,Glassdoor ratings overall,Glassdoor
+,Ratings for specific departments,Glassdoor filtered reviews
+,Common complaints in reviews,"Glassdoor, Indeed reviews"
+,Leadership approval rating,Glassdoor CEO rating
+,Work-life balance scores,"Glassdoor, Comparably"
+,Technology/tools complaints,"Glassdoor reviews mentioning ""outdated tools,"" ""legacy systems"""
+,Process/bureaucracy complaints,Glassdoor review themes
+,Compensation satisfaction,"Glassdoor, Levels.fyi"
+,Career growth sentiment,"Glassdoor ""Career Opportunities"" rating"
+,Interview experience ratings,Glassdoor interview reviews
+Talent Movement,Recent departures from key roles,LinkedIn job changes
+,Alumni now at competitors,LinkedIn alumni tool
+,Where they recruit from (companies/schools),LinkedIn employee education/experience
+,Tenure distribution (lots of new hires vs veterans),LinkedIn tenure analysis
+,Boomerang employees (left and returned),LinkedIn experience timelines
+,Departures to specific competitors,LinkedIn alumni analysis
+,Mass exodus events,LinkedIn job changes clustered in time
+,Retirement/succession signals,"LinkedIn, news"
+Employee Profile,Average employee tenure,LinkedIn aggregation
+,Educational background concentration,LinkedIn education filters
+,Previous company experience patterns,LinkedIn experience analysis
+,Technical certifications held,LinkedIn certifications section
+,Industry experience distribution,LinkedIn experience analysis
+,Thought leaders/active on social media,"LinkedIn activity, Twitter/X"
+,Conference speakers from the company,"Event speaker lists, YouTube"
+,Published authors/researchers,"Google Scholar, Medium, company blogs"
+,Employee side projects/open source contributions,"GitHub, personal websites"
+Training & Development,Learning & development programs mentioned,"Glassdoor, company benefits pages"
+,Tuition reimbursement policies,"Job postings, benefits info"
+,Internal mobility patterns,LinkedIn job history within same company
+,Promotion velocity signals,LinkedIn title progressions
+,Apprenticeship/rotation programs,Company careers page
+,Partnership with training vendors,"Press releases, vendor case studies"
+,Internal university/academy programs,"Company website, LinkedIn Learning partnerships"
+Organizational Changes,Recent reorganizations,"News, LinkedIn title changes en masse"
+,New departments or teams formed,"LinkedIn, job postings, press releases"
+,Consolidation or elimination of teams,"News, Glassdoor, LinkedIn"
+,Shift to centralized vs decentralized models,"Job descriptions, org structure signals"
+,Span of control changes (flattening/layering),LinkedIn title analysis
+,Offshoring/nearshoring initiatives,"Job locations, news, LinkedIn"
+,Insourcing previously outsourced functions,"Job postings, news"
+Diversity & Culture,D&I initiatives or commitments,"Company website, CSR reports"
+,Employee resource groups,"Company careers page, LinkedIn"
+,Demographic composition (if shared),Company diversity reports
+,Culture keywords in employee reviews,Glassdoor sentiment analysis
+,Values alignment signals,"Company website, employee testimonials"
+,Belonging/inclusion scores,"Comparably, Glassdoor"
+,Parental leave policies,"Job postings, Glassdoor"
+Compensation & Benefits,Salary ranges (where disclosed),"Job postings, Levels.fyi, Glassdoor"
+,Equity/stock compensation patterns,"Levels.fyi, H1B salary database"
+,Benefits package competitiveness,"Glassdoor, job postings"
+,Remote work compensation policies,"News, Glassdoor"
+,Performance bonus structures,"Glassdoor, job descriptions"
+,"401k match, healthcare quality",Glassdoor benefits reviews
+Team Maturity Signals,Ratio of senior to junior staff,LinkedIn title distribution
+,Presence of principal/staff/distinguished engineers,LinkedIn title search
+,Existence of enablement/training roles,"LinkedIn, job postings"
+,Dedicated program/project management,LinkedIn role counts
+,Specialized vs generalist roles,Job description analysis
+,Operations/efficiency roles,LinkedIn searches
+Office & Location,Office openings or closures,"News, company announcements"
+,Real estate expansion/contraction,Commercial real estate news
+,Satellite office locations,"LinkedIn, company website"
+,Co-working space usage,"News, LinkedIn locations"
+,Return-to-office mandates,"News, Glassdoor, LinkedIn"
+,International expansion hires,"Job locations, visa sponsorships"
