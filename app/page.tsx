@@ -117,6 +117,25 @@ export default function HomePage() {
                 </div>
             </section>
 
+            {/* Powered By Strip */}
+            <section className="py-6 bg-white border-y border-gray-100">
+                <div className="container-app">
+                    <div className="flex items-center justify-center gap-3">
+                        <span className="text-xs text-gray-400 font-medium">Powered by</span>
+                        <div className="flex items-center gap-4">
+                            <Image
+                                src="/images/logos/openai-powered-by.svg"
+                                alt="OpenAI"
+                                width={80}
+                                height={20}
+                                className="h-5 w-auto opacity-60 hover:opacity-100 transition-opacity"
+                            />
+                            {/* Add more provider logos here */}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             {/* Video Cards Section */}
             <section className="py-20 md:py-28 bg-white">
                 <div className="container-app">
