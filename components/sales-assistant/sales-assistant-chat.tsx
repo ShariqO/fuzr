@@ -19,10 +19,10 @@ interface SalesAssistantChatProps {
 }
 
 const QUICK_ACTIONS = [
-    { label: '🎯 Analyze Pain Points', action: 'analyze-pain-points', prompt: 'Analyze this company\'s pain points' },
-    { label: '✉️ Draft Email', action: 'generate-email', prompt: 'Draft an outreach email for this company' },
-    { label: '👥 Find Contacts', action: 'find-contacts', prompt: 'Who should I reach out to at this company?' },
-    { label: '📈 Market Trends', action: 'market-trends', prompt: 'What are the market trends for this company?' },
+    { label: 'Analyze Pain Points', action: 'analyze-pain-points', prompt: 'Analyze this company\'s pain points' },
+    { label: 'Draft Email', action: 'generate-email', prompt: 'Draft an outreach email for this company' },
+    { label: 'Find Contacts', action: 'find-contacts', prompt: 'Who should I reach out to at this company?' },
+    { label: 'Market Trends', action: 'market-trends', prompt: 'What are the market trends for this company?' },
 ]
 
 export function SalesAssistantChat({ companyId, companyName, companyWebsite }: SalesAssistantChatProps) {
@@ -136,22 +136,22 @@ export function SalesAssistantChat({ companyId, companyName, companyWebsite }: S
                 let response = '## Pain Point Analysis\n\n'
 
                 if (analysis.painPoints?.length > 0) {
-                    response += '### 🎯 Key Pain Points\n'
+                    response += '### Key Pain Points\n'
                     analysis.painPoints.forEach((p: any) => {
-                        const severity = p.severity === 'high' ? '🔴' : p.severity === 'medium' ? '🟡' : '🟢'
+                        const severity = p.severity === 'high' ? '[HIGH]' : p.severity === 'medium' ? '[MED]' : '[LOW]'
                         response += `\n**${severity} ${p.title}**\n${p.description}\n`
                     })
                 }
 
                 if (analysis.opportunities?.length > 0) {
-                    response += '\n### 💡 Opportunities\n'
+                    response += '\n### Opportunities\n'
                     analysis.opportunities.forEach((o: string) => {
                         response += `- ${o}\n`
                     })
                 }
 
                 if (analysis.recommendedApproach) {
-                    response += `\n### 📋 Recommended Approach\n${analysis.recommendedApproach}`
+                    response += `\n### Recommended Approach\n${analysis.recommendedApproach}`
                 }
 
                 return response
@@ -161,7 +161,7 @@ export function SalesAssistantChat({ companyId, companyName, companyWebsite }: S
                 const email = data.email
                 if (!email) return 'Unable to generate email. OpenAI may not be configured.'
 
-                let response = '## 📧 Draft Outreach Email\n\n'
+                let response = '## Draft Outreach Email\n\n'
                 response += `**Subject:** ${email.subject}\n\n`
                 response += '---\n\n'
                 response += email.body
@@ -181,11 +181,11 @@ export function SalesAssistantChat({ companyId, companyName, companyWebsite }: S
                 const contacts = data.contacts
                 if (!contacts?.length) return 'Unable to find contacts. Try entering a company domain.'
 
-                let response = `## 👥 Recommended Contacts\n\n`
+                let response = `## Recommended Contacts\n\n`
                 response += `*Source: ${data.source === 'hunter.io' ? 'Hunter.io' : 'AI recommendations'}*\n\n`
 
                 contacts.forEach((c: any, idx: number) => {
-                    const priority = c.priority === 1 ? '⭐' : c.priority === 2 ? '🔵' : '⚪'
+                    const priority = c.priority === 1 ? '[Primary]' : c.priority === 2 ? '[Secondary]' : '[Other]'
                     response += `### ${priority} ${c.name || c.title}\n`
                     if (c.title) response += `**Title:** ${c.title}\n`
                     if (c.department) response += `**Dept:** ${c.department}\n`
@@ -201,23 +201,23 @@ export function SalesAssistantChat({ companyId, companyName, companyWebsite }: S
                 const trends = data.trends
                 if (!trends) return 'Unable to analyze market trends. OpenAI may not be configured.'
 
-                let response = '## 📈 Market Analysis\n\n'
+                let response = '## Market Analysis\n\n'
 
                 response += `**Summary:** ${trends.summary}\n\n`
 
                 if (trends.trends?.length > 0) {
                     response += '### Trends\n'
-                    trends.trends.forEach((t: string) => response += `- 📊 ${t}\n`)
+                    trends.trends.forEach((t: string) => response += `- ${t}\n`)
                 }
 
                 if (trends.challenges?.length > 0) {
                     response += '\n### Challenges\n'
-                    trends.challenges.forEach((c: string) => response += `- ⚠️ ${c}\n`)
+                    trends.challenges.forEach((c: string) => response += `- ${c}\n`)
                 }
 
                 if (trends.opportunities?.length > 0) {
                     response += '\n### Opportunities\n'
-                    trends.opportunities.forEach((o: string) => response += `- 💡 ${o}\n`)
+                    trends.opportunities.forEach((o: string) => response += `- ${o}\n`)
                 }
 
                 return response
@@ -281,7 +281,9 @@ export function SalesAssistantChat({ companyId, companyName, companyWebsite }: S
                 onClick={() => setIsExpanded(true)}
                 className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center"
             >
-                <span className="text-2xl">🤖</span>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
             </button>
         )
     }
@@ -291,7 +293,9 @@ export function SalesAssistantChat({ companyId, companyName, companyWebsite }: S
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white">
                 <div className="flex items-center gap-2">
-                    <span className="text-xl">🤖</span>
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                    </svg>
                     <div>
                         <div className="font-semibold">Sales Assistant</div>
                         <div className="text-xs text-primary-100">Powered by AI</div>
@@ -316,8 +320,8 @@ export function SalesAssistantChat({ companyId, companyName, companyWebsite }: S
                     >
                         <div
                             className={`max-w-[85%] rounded-2xl px-4 py-3 ${message.role === 'user'
-                                    ? 'bg-primary-600 text-white rounded-br-md'
-                                    : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow rounded-bl-md'
+                                ? 'bg-primary-600 text-white rounded-br-md'
+                                : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow rounded-bl-md'
                                 }`}
                         >
                             {renderMessage(message)}

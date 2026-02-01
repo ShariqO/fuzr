@@ -18,6 +18,8 @@ export default function CompanyDetailPage() {
     const [recommendation, setRecommendation] = useState<Recommendation | null>(null)
     const [error, setError] = useState('')
     const [showExportModal, setShowExportModal] = useState(false)
+    const [isRefreshing, setIsRefreshing] = useState(false)
+    const [lastRefreshed, setLastRefreshed] = useState<string | null>(null)
 
     useEffect(() => {
         async function loadCompanyData() {
@@ -57,11 +59,46 @@ export default function CompanyDetailPage() {
                 .single()
 
             setRecommendation(recData)
+
+            // Check if there's a last enriched date - use type assertion since we know the type
+            const enrichedDate = (companyData as Company).last_enriched_at
+            if (enrichedDate) {
+                setLastRefreshed(enrichedDate)
+            }
+
             setLoading(false)
         }
 
         loadCompanyData()
     }, [supabase, router, companyId])
+
+    const canRefresh = () => {
+        if (!lastRefreshed) return true
+        const lastDate = new Date(lastRefreshed)
+        const now = new Date()
+        const daysSinceRefresh = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
+        return daysSinceRefresh >= 7
+    }
+
+    const handleRefresh = async () => {
+        if (!canRefresh()) return
+
+        setIsRefreshing(true)
+        try {
+            const response = await fetch(`/api/companies/${companyId}/refresh-signals`, {
+                method: 'POST',
+            })
+
+            if (response.ok) {
+                // Reload the page to get fresh data
+                window.location.reload()
+            }
+        } catch (error) {
+            console.error('Refresh failed:', error)
+        } finally {
+            setIsRefreshing(false)
+        }
+    }
 
     const handleExportJSON = () => {
         if (!company) return
@@ -188,7 +225,11 @@ export default function CompanyDetailPage() {
                 <div className="flex items-center justify-center min-h-[400px]">
                     <Card className="text-center py-12 px-8">
                         <CardContent>
-                            <div className="text-4xl mb-4">🔍</div>
+                            <div className="w-16 h-16 mx-auto mb-4 text-gray-400">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
                             <p className="text-error-600 dark:text-error-400 mb-4">{error || 'Company not found'}</p>
                             <Button variant="secondary" onClick={() => router.push('/dashboard')}>
                                 ← Back to Dashboard
@@ -205,10 +246,26 @@ export default function CompanyDetailPage() {
             <PageHeader
                 title={company.name}
                 description={
-                    <div className="flex flex-wrap gap-3 text-sm">
-                        <span className="text-gray-500 dark:text-gray-400">🏢 {company.industry}</span>
-                        <span className="text-gray-500 dark:text-gray-400">👥 {company.size_band}</span>
-                        <span className="text-gray-500 dark:text-gray-400">📍 {company.location_uk}</span>
+                    <div className="flex flex-wrap gap-4 text-sm">
+                        <span className="inline-flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            {company.industry}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            {company.size_band}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            {company.location_uk}
+                        </span>
                     </div>
                 }
                 breadcrumbs={[
@@ -216,9 +273,42 @@ export default function CompanyDetailPage() {
                     { label: company.name },
                 ]}
                 actions={
-                    <Button onClick={() => setShowExportModal(true)}>
-                        📊 Export Metrics
-                    </Button>
+                    <div className="flex items-center gap-3">
+                        {/* Refresh Button */}
+                        <div className="relative group">
+                            <button
+                                onClick={handleRefresh}
+                                disabled={!canRefresh() || isRefreshing}
+                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${canRefresh() && !isRefreshing
+                                    ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    : 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                                    }`}
+                            >
+                                <svg
+                                    className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`}
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
+                            </button>
+                            {/* Tooltip */}
+                            {!canRefresh() && (
+                                <div className="absolute right-0 top-full mt-2 w-56 p-3 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                                    <p className="font-medium mb-1">Latest week&apos;s results</p>
+                                    <p className="text-gray-300">Data was refreshed on {lastRefreshed ? new Date(lastRefreshed).toLocaleDateString() : 'unknown'}. Weekly refresh only.</p>
+                                </div>
+                            )}
+                        </div>
+                        <Button onClick={() => setShowExportModal(true)}>
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                            Export Metrics
+                        </Button>
+                    </div>
                 }
             />
 
@@ -233,9 +323,12 @@ export default function CompanyDetailPage() {
                                 href={company.website}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-primary-600 hover:text-primary-700 text-sm inline-flex items-center gap-1"
+                                className="text-primary-600 hover:text-primary-700 text-sm inline-flex items-center gap-1.5"
                             >
-                                🔗 {company.website}
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                </svg>
+                                {company.website}
                             </a>
                         )}
                     </CardContent>
@@ -399,7 +492,11 @@ export default function CompanyDetailPage() {
                         onClick={handleExportJSON}
                         className="w-full flex items-center gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
                     >
-                        <div className="text-3xl">📋</div>
+                        <div className="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
+                            <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
                         <div>
                             <div className="font-semibold text-gray-900 dark:text-white">JSON Format</div>
                             <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -412,7 +509,11 @@ export default function CompanyDetailPage() {
                         onClick={handleExportCSV}
                         className="w-full flex items-center gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
                     >
-                        <div className="text-3xl">📊</div>
+                        <div className="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
+                            <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                        </div>
                         <div>
                             <div className="font-semibold text-gray-900 dark:text-white">CSV Format</div>
                             <div className="text-sm text-gray-500 dark:text-gray-400">

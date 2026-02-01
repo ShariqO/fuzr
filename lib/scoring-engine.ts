@@ -206,7 +206,7 @@ export class RecommendationEngine {
 
         for (const signal of sortedSignals.slice(0, 3)) {
             const daysAgo = Math.floor((today.getTime() - new Date(signal.signal_date).getTime()) / (1000 * 60 * 60 * 24))
-            const recency = daysAgo <= 30 ? '🔥 Recent' : daysAgo <= 90 ? '📍 Recent' : ''
+            const recency = daysAgo <= 30 ? '[New]' : daysAgo <= 90 ? '[Recent]' : ''
             const aiTag = (signal as any).extraction_method === 'ai_extracted' ? '[AI] ' : ''
             reasons.push(`${recency} ${aiTag}${signal.signal_type}: ${signal.evidence_text}`.trim())
         }
