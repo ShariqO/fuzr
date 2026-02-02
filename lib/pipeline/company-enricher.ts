@@ -301,63 +301,7 @@ export async function refreshCompanySignals(
         }
     }
 
-    // 3. Web scraping for additional signals (if website available)
-    if (isScrapingEnabled() && website) {
-        console.log(`[RefreshSignals] Scraping company website: ${website}`)
-        try {
-            const scrapedData = await scrapeCompanyWebsite(website, companyName, {
-                extractSignals: true,
-                checkCareers: true,
-            })
-
-            if (scrapedData) {
-                // Add careers-based hiring signal
-                const careersSignal = generateHiringSignalFromCareers(scrapedData.careersData)
-                if (careersSignal) {
-                    signals.push({
-                        signal_type: careersSignal.signal_type,
-                        evidence_text: careersSignal.evidence_text,
-                        source_label: 'Company Website',
-                        signal_date: new Date().toISOString().split('T')[0],
-                        confidence: careersSignal.confidence,
-                        extraction_method: 'scraping',
-                    })
-                    console.log(`[RefreshSignals] Added careers signal from website`)
-                }
-
-                // Add AI-extracted signals from website content
-                if (scrapedData.aiSignals) {
-                    for (const signal of scrapedData.aiSignals) {
-                        signals.push({
-                            signal_type: signal.signal_type,
-                            evidence_text: signal.evidence_text,
-                            source_label: 'Company Website',
-                            signal_date: new Date().toISOString().split('T')[0],
-                            confidence: signal.confidence,
-                            extraction_method: 'ai_extracted',
-                        })
-                    }
-                    console.log(`[RefreshSignals] Added ${scrapedData.aiSignals.length} AI signals from website`)
-                }
-
-                // Add tech stack signal if detected
-                if (scrapedData.technologies.length >= 3) {
-                    signals.push({
-                        signal_type: 'Tooling Refresh / Stack Change',
-                        evidence_text: `Tech stack detected: ${scrapedData.technologies.slice(0, 5).join(', ')}`,
-                        source_label: 'Company Website',
-                        signal_date: new Date().toISOString().split('T')[0],
-                        confidence: 0.6,
-                        extraction_method: 'scraping',
-                    })
-                }
-            }
-        } catch (err) {
-            console.log(`[RefreshSignals] Scraping error:`, err instanceof Error ? err.message : 'Unknown')
-        }
-    }
-
-    // 4. Refresh news signals from all sources
+    // 3. Refresh news signals from all sources
     const allNewsTexts: Array<{ text: string; source: string }> = []
 
     console.log(`[RefreshSignals] News API enabled: ${isNewsAPIEnabled()}`)
@@ -410,8 +354,145 @@ export async function refreshCompanySignals(
         }
     }
 
+    // 4. Web scraping as FALLBACK - runs when we have few signals or always if scraping enabled
+    // This ensures we try our best to find information
+    const shouldScrape = isScrapingEnabled() && (signals.length < 2 || website)
+
+    if (shouldScrape) {
+        // Try to find/guess website if not provided
+        let targetWebsite: string | undefined = website
+        if (!targetWebsite) {
+            // Try to guess website from company name
+            const guessedWebsite = guessCompanyWebsite(companyName)
+            if (guessedWebsite) {
+                targetWebsite = guessedWebsite
+                console.log(`[RefreshSignals] Guessed website: ${targetWebsite}`)
+            }
+        }
+
+        if (targetWebsite) {
+            console.log(`[RefreshSignals] Scraping company website as fallback: ${targetWebsite}`)
+            try {
+                const scrapedData = await scrapeCompanyWebsite(targetWebsite, companyName, {
+                    extractSignals: true,
+                    checkCareers: true,
+                })
+
+                if (scrapedData) {
+                    // Add careers-based hiring signal
+                    const careersSignal = generateHiringSignalFromCareers(scrapedData.careersData)
+                    if (careersSignal) {
+                        signals.push({
+                            signal_type: careersSignal.signal_type,
+                            evidence_text: careersSignal.evidence_text,
+                            source_label: 'Company Website',
+                            signal_date: new Date().toISOString().split('T')[0],
+                            confidence: careersSignal.confidence,
+                            extraction_method: 'scraping',
+                        })
+                        console.log(`[RefreshSignals] Added careers signal from website`)
+                    }
+
+                    // Add AI-extracted signals from website content
+                    if (scrapedData.aiSignals && scrapedData.aiSignals.length > 0) {
+                        for (const signal of scrapedData.aiSignals) {
+                            signals.push({
+                                signal_type: signal.signal_type,
+                                evidence_text: signal.evidence_text,
+                                source_label: 'Company Website',
+                                signal_date: new Date().toISOString().split('T')[0],
+                                confidence: signal.confidence,
+                                extraction_method: 'ai_extracted',
+                            })
+                        }
+                        console.log(`[RefreshSignals] Added ${scrapedData.aiSignals.length} AI signals from website`)
+                    }
+
+                    // Add tech stack signal if detected
+                    if (scrapedData.technologies.length >= 3) {
+                        signals.push({
+                            signal_type: 'Tooling Refresh / Stack Change',
+                            evidence_text: `Tech stack detected: ${scrapedData.technologies.slice(0, 5).join(', ')}`,
+                            source_label: 'Company Website',
+                            signal_date: new Date().toISOString().split('T')[0],
+                            confidence: 0.6,
+                            extraction_method: 'scraping',
+                        })
+                    }
+
+                    // Add description as basic signal if we still have nothing
+                    if (signals.length === 0 && scrapedData.description) {
+                        signals.push({
+                            signal_type: 'Expansion / New Market',
+                            evidence_text: `Company description: ${scrapedData.description.slice(0, 200)}...`,
+                            source_label: 'Company Website',
+                            signal_date: new Date().toISOString().split('T')[0],
+                            confidence: 0.4,
+                            extraction_method: 'scraping',
+                        })
+                        console.log(`[RefreshSignals] Added basic description signal as fallback`)
+                    }
+                }
+            } catch (err) {
+                console.log(`[RefreshSignals] Scraping error:`, err instanceof Error ? err.message : 'Unknown')
+            }
+        } else {
+            console.log(`[RefreshSignals] No website URL available for scraping fallback`)
+        }
+    }
+
     console.log(`[RefreshSignals] Completed. Total signals: ${signals.length}`)
     return signals
+}
+
+/**
+ * Guess company website from company name
+ * Common patterns for UK companies
+ */
+function guessCompanyWebsite(companyName: string): string | null {
+    // Clean the company name
+    const cleaned = companyName
+        .toLowerCase()
+        .replace(/\b(limited|ltd|plc|uk|llp|inc|corporation|corp)\b/gi, '')
+        .replace(/[^a-z0-9\s]/g, '')
+        .trim()
+        .replace(/\s+/g, '')
+
+    if (!cleaned || cleaned.length < 2) return null
+
+    // Known company domains (common UK companies)
+    const knownDomains: Record<string, string> = {
+        'monzobank': 'https://monzo.com',
+        'monzo': 'https://monzo.com',
+        'revolut': 'https://revolut.com',
+        'starlingbank': 'https://starlingbank.com',
+        'starling': 'https://starlingbank.com',
+        'tesco': 'https://tesco.com',
+        'barclays': 'https://barclays.co.uk',
+        'hsbc': 'https://hsbc.co.uk',
+        'lloyds': 'https://lloydsbank.com',
+        'natwest': 'https://natwest.com',
+        'wise': 'https://wise.com',
+        'transferwise': 'https://wise.com',
+        'deliveroo': 'https://deliveroo.co.uk',
+        'ocado': 'https://ocado.com',
+        'sainsburys': 'https://sainsburys.co.uk',
+        'marks': 'https://marksandspencer.com',
+        'marksandspencer': 'https://marksandspencer.com',
+        'johnlewis': 'https://johnlewis.com',
+        'boots': 'https://boots.com',
+        'britishairways': 'https://britishairways.com',
+    }
+
+    // Check if we have a known domain
+    for (const [key, domain] of Object.entries(knownDomains)) {
+        if (cleaned.includes(key) || key.includes(cleaned)) {
+            return domain
+        }
+    }
+
+    // Try common patterns for UK companies
+    return `https://${cleaned}.com`
 }
 
 /**
