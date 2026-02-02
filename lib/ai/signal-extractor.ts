@@ -106,20 +106,41 @@ export async function extractSignalsFromMultipleTexts(
 ): Promise<Array<ExtractedSignal & { source_label: string }>> {
     const allSignals: Array<ExtractedSignal & { source_label: string }> = []
 
-    for (const { text, source } of texts) {
-        const result = await extractSignalsFromText(text, companyName)
-        if (result?.signals) {
-            for (const signal of result.signals) {
-                allSignals.push({
-                    ...signal,
-                    source_label: source,
-                })
+    // Filter out null/undefined texts
+    const validTexts = texts.filter(t => t && t.text && typeof t.text === 'string' && t.text.trim().length > 10)
+
+    if (validTexts.length === 0) {
+        console.log('[SignalExtractor] No valid texts to process')
+        return []
+    }
+
+    console.log(`[SignalExtractor] Processing ${validTexts.length} texts for "${companyName}"`)
+
+    for (const { text, source } of validTexts) {
+        try {
+            const result = await extractSignalsFromText(text, companyName)
+            if (result && result.signals && Array.isArray(result.signals)) {
+                for (const signal of result.signals) {
+                    if (signal && signal.signal_type && signal.evidence_text) {
+                        allSignals.push({
+                            ...signal,
+                            source_label: source || 'Unknown Source',
+                        })
+                    }
+                }
             }
+        } catch (err) {
+            // Log just the message, not the full error object
+            console.log('[SignalExtractor] Error extracting from text:', err instanceof Error ? err.message : 'Unknown error')
         }
     }
 
+    console.log(`[SignalExtractor] Extracted ${allSignals.length} raw signals`)
+
     // Deduplicate similar signals (same type, similar evidence)
     const uniqueSignals = deduplicateSignals(allSignals)
+
+    console.log(`[SignalExtractor] After dedup: ${uniqueSignals.length} signals`)
 
     return uniqueSignals
 }

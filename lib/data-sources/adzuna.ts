@@ -58,21 +58,34 @@ export async function searchJobsByCompany(
     }
 
     try {
-        const url = `${BASE_URL}/1?app_id=${appId}&app_key=${appKey}&results_per_page=${limit}&what_or=${encodeURIComponent(companyName)}&company=${encodeURIComponent(companyName)}`
-        console.log(`[Adzuna] Searching for jobs at: ${companyName}`)
+        // Clean company name - remove special characters that might break the API
+        const cleanName = companyName
+            .replace(/[^a-zA-Z0-9\s]/g, '')
+            .trim()
+            .slice(0, 50) // Limit length
+
+        if (!cleanName) {
+            console.log('[Adzuna] Company name cleaned to empty string')
+            return null
+        }
+
+        // Use simpler search with just 'what' parameter
+        const url = `${BASE_URL}/1?app_id=${appId}&app_key=${appKey}&results_per_page=${limit}&what=${encodeURIComponent(cleanName)}`
+        console.log(`[Adzuna] Searching for jobs at: ${cleanName}`)
 
         const response = await fetch(url)
 
         if (!response.ok) {
-            console.error('[Adzuna] API error:', response.status, await response.text())
+            // Don't log full HTML response, just status
+            console.log('[Adzuna] API returned error status:', response.status)
             return null
         }
 
         const data = await response.json()
-        console.log(`[Adzuna] Found ${data.count || 0} jobs for ${companyName}`)
+        console.log(`[Adzuna] Found ${data?.count || 0} jobs for ${cleanName}`)
         return data
     } catch (error) {
-        console.error('[Adzuna] Error searching:', error)
+        console.log('[Adzuna] Error searching:', error instanceof Error ? error.message : 'Unknown error')
         return null
     }
 }
