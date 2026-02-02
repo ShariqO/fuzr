@@ -20,7 +20,8 @@ import {
 import { analyzeHiringSignals, createHiringSignal } from '../data-sources/adzuna'
 import { fetchNewsFromMultipleSources, getNewsTextForProcessing } from '../data-sources/news-feed'
 import { searchCompanyNews, getNewsForAIProcessing, isNewsAPIEnabled } from '../data-sources/newsapi'
-import { checkFCAStatus, searchFCAFirms, extractWebsiteFromFCA } from '../data-sources/fca-register'
+import { lookupFCAStatus, generateFCASignals } from '../data-sources/fca-lookup'
+import { scrapeCompanyWebsite, generateHiringSignalFromCareers, isScrapingEnabled } from '../enrichment/web-scraper'
 import { generateEmbedding } from '../ai/embeddings'
 import { extractSignalsFromMultipleTexts, type ExtractedSignal } from '../ai/signal-extractor'
 import type { Database } from '@/types/database'
@@ -82,11 +83,10 @@ export async function searchAndEnrichCompanies(
 async function findCompanyWebsite(companyName: string, industry: string): Promise<string> {
     // Try FCA Register first (for financial companies)
     if (industry === 'Financial Services') {
-        const fcaFirms = await searchFCAFirms(companyName, 3)
-        const fcaWebsite = extractWebsiteFromFCA(fcaFirms)
-        if (fcaWebsite) {
-            console.log(`[Enricher] Found website from FCA: ${fcaWebsite}`)
-            return fcaWebsite
+        const fcaInfo = await lookupFCAStatus(companyName)
+        if (fcaInfo && fcaInfo.firmReferenceNumber) {
+            // FCA doesn't give us website directly, but we know the company is regulated
+            console.log(`[Enricher] Found in FCA Register: FRN ${fcaInfo.firmReferenceNumber}`)
         }
     }
 
@@ -165,9 +165,10 @@ async function enrichCompanyData(
         // 2. Get FCA regulatory signals (for financial companies)
         if (industry === 'Financial Services') {
             console.log(`[Enricher] Checking FCA status for ${profile.company_name}`)
-            const fcaStatus = await checkFCAStatus(profile.company_name)
-            if (fcaStatus.isRegulated && fcaStatus.signals.length > 0) {
-                for (const signal of fcaStatus.signals) {
+            const fcaInfo = await lookupFCAStatus(profile.company_name)
+            if (fcaInfo && fcaInfo.isRegulated) {
+                const fcaSignals = generateFCASignals(fcaInfo)
+                for (const signal of fcaSignals) {
                     signals.push({
                         signal_type: signal.type,
                         evidence_text: signal.text,
@@ -244,7 +245,8 @@ async function enrichCompanyData(
 export async function refreshCompanySignals(
     companyName: string,
     companyId: string,
-    industry?: string
+    industry?: string,
+    website?: string
 ): Promise<Omit<SignalInsert, 'company_id'>[]> {
     console.log(`[RefreshSignals] Starting for "${companyName}" (industry: ${industry || 'unknown'})`)
     const signals: Omit<SignalInsert, 'company_id'>[] = []
@@ -269,17 +271,18 @@ export async function refreshCompanySignals(
             }
         }
     } catch (err) {
-        console.error(`[RefreshSignals] Adzuna error:`, err)
+        console.log(`[RefreshSignals] Adzuna error:`, err instanceof Error ? err.message : 'Unknown')
     }
 
-    // 2. Check FCA status if financial services
+    // 2. Check FCA status for financial services companies (using new reliable lookup)
     if (industry === 'Financial Services') {
-        console.log(`[RefreshSignals] Checking FCA Register...`)
+        console.log(`[RefreshSignals] Checking FCA Register (using lookup)...`)
         try {
-            const fcaStatus = await checkFCAStatus(companyName)
-            console.log(`[RefreshSignals] FCA result: regulated=${fcaStatus.isRegulated}, signals=${fcaStatus.signals.length}`)
-            if (fcaStatus.isRegulated && fcaStatus.signals.length > 0) {
-                for (const signal of fcaStatus.signals) {
+            const fcaInfo = await lookupFCAStatus(companyName)
+            if (fcaInfo) {
+                console.log(`[RefreshSignals] FCA result: ${fcaInfo.status}, FRN: ${fcaInfo.firmReferenceNumber}`)
+                const fcaSignals = generateFCASignals(fcaInfo)
+                for (const signal of fcaSignals) {
                     signals.push({
                         signal_type: signal.type,
                         evidence_text: signal.text,
@@ -289,14 +292,72 @@ export async function refreshCompanySignals(
                         extraction_method: 'api',
                     })
                 }
-                console.log(`[RefreshSignals] Added ${fcaStatus.signals.length} FCA signals`)
+                console.log(`[RefreshSignals] Added ${fcaSignals.length} FCA signals`)
+            } else {
+                console.log(`[RefreshSignals] Company not found in FCA Register`)
             }
         } catch (err) {
-            console.error(`[RefreshSignals] FCA error:`, err)
+            console.log(`[RefreshSignals] FCA error:`, err instanceof Error ? err.message : 'Unknown')
         }
     }
 
-    // 3. Refresh news signals from all sources
+    // 3. Web scraping for additional signals (if website available)
+    if (isScrapingEnabled() && website) {
+        console.log(`[RefreshSignals] Scraping company website: ${website}`)
+        try {
+            const scrapedData = await scrapeCompanyWebsite(website, companyName, {
+                extractSignals: true,
+                checkCareers: true,
+            })
+
+            if (scrapedData) {
+                // Add careers-based hiring signal
+                const careersSignal = generateHiringSignalFromCareers(scrapedData.careersData)
+                if (careersSignal) {
+                    signals.push({
+                        signal_type: careersSignal.signal_type,
+                        evidence_text: careersSignal.evidence_text,
+                        source_label: 'Company Website',
+                        signal_date: new Date().toISOString().split('T')[0],
+                        confidence: careersSignal.confidence,
+                        extraction_method: 'scraping',
+                    })
+                    console.log(`[RefreshSignals] Added careers signal from website`)
+                }
+
+                // Add AI-extracted signals from website content
+                if (scrapedData.aiSignals) {
+                    for (const signal of scrapedData.aiSignals) {
+                        signals.push({
+                            signal_type: signal.signal_type,
+                            evidence_text: signal.evidence_text,
+                            source_label: 'Company Website',
+                            signal_date: new Date().toISOString().split('T')[0],
+                            confidence: signal.confidence,
+                            extraction_method: 'ai_extracted',
+                        })
+                    }
+                    console.log(`[RefreshSignals] Added ${scrapedData.aiSignals.length} AI signals from website`)
+                }
+
+                // Add tech stack signal if detected
+                if (scrapedData.technologies.length >= 3) {
+                    signals.push({
+                        signal_type: 'Tooling Refresh / Stack Change',
+                        evidence_text: `Tech stack detected: ${scrapedData.technologies.slice(0, 5).join(', ')}`,
+                        source_label: 'Company Website',
+                        signal_date: new Date().toISOString().split('T')[0],
+                        confidence: 0.6,
+                        extraction_method: 'scraping',
+                    })
+                }
+            }
+        } catch (err) {
+            console.log(`[RefreshSignals] Scraping error:`, err instanceof Error ? err.message : 'Unknown')
+        }
+    }
+
+    // 4. Refresh news signals from all sources
     const allNewsTexts: Array<{ text: string; source: string }> = []
 
     console.log(`[RefreshSignals] News API enabled: ${isNewsAPIEnabled()}`)
@@ -311,7 +372,7 @@ export async function refreshCompanySignals(
             const newsApiTexts = getNewsForAIProcessing(newsApiArticles)
             allNewsTexts.push(...newsApiTexts.map(n => ({ text: n.text, source: n.source })))
         } catch (err) {
-            console.error(`[RefreshSignals] NewsAPI error:`, err)
+            console.log(`[RefreshSignals] NewsAPI error:`, err instanceof Error ? err.message : 'Unknown')
         }
     }
 
@@ -321,7 +382,7 @@ export async function refreshCompanySignals(
         const googleNewsTexts = getNewsTextForProcessing(googleNews)
         allNewsTexts.push(...googleNewsTexts)
     } catch (err) {
-        console.error(`[RefreshSignals] Google News error:`, err)
+        console.log(`[RefreshSignals] Google News error:`, err instanceof Error ? err.message : 'Unknown')
     }
 
     console.log(`[RefreshSignals] Total news texts for AI processing: ${allNewsTexts.length}`)
@@ -345,7 +406,7 @@ export async function refreshCompanySignals(
                 })
             }
         } catch (err) {
-            console.error(`[RefreshSignals] AI extraction error:`, err)
+            console.log(`[RefreshSignals] AI extraction error:`, err instanceof Error ? err.message : 'Unknown')
         }
     }
 

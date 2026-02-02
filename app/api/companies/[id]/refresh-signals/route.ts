@@ -27,10 +27,15 @@ export async function POST(
         }
 
         console.log(`[Refresh] Starting refresh for ${company.name} (${companyId})`)
-        console.log(`[Refresh] Industry: ${company.industry}`)
+        console.log(`[Refresh] Industry: ${company.industry}, Website: ${company.website || 'none'}`)
 
-        // Refresh signals using the pipeline - pass industry for FCA lookup
-        const newSignals = await refreshCompanySignals(company.name, companyId, company.industry || undefined)
+        // Refresh signals using the pipeline - pass industry and website for enrichment
+        const newSignals = await refreshCompanySignals(
+            company.name,
+            companyId,
+            company.industry || undefined,
+            company.website || undefined
+        )
 
         console.log(`[Refresh] Got ${newSignals.length} signals from pipeline`)
 
