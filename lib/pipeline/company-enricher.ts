@@ -5,8 +5,10 @@
  * Data Sources:
  * - Companies House (company profiles, SIC codes)
  * - Adzuna (job postings, hiring signals)
+ * - RapidAPI Jobs (JSearch, LinkedIn Jobs, ActiveJobsDB)
  * - NewsAPI / Google News (news articles, AI signal extraction)
  * - FCA Register (regulatory status for financial companies)
+ * - Web Scraping (careers pages, tech stack, AI signals)
  * - Hunter.io (contacts - used separately in sales assistant)
  */
 
@@ -18,6 +20,7 @@ import {
     type CompaniesHouseCompany
 } from '../data-sources/companies-house'
 import { analyzeHiringSignals, createHiringSignal } from '../data-sources/adzuna'
+import { searchAllJobAPIs, isRapidAPIEnabled } from '../data-sources/rapidapi-jobs'
 import { fetchNewsFromMultipleSources, getNewsTextForProcessing } from '../data-sources/news-feed'
 import { searchCompanyNews, getNewsForAIProcessing, isNewsAPIEnabled } from '../data-sources/newsapi'
 import { lookupFCAStatus, generateFCASignals } from '../data-sources/fca-lookup'
@@ -240,38 +243,84 @@ async function enrichCompanyData(
 }
 
 /**
+ * Return type for refreshCompanySignals - includes discovered data to update
+ */
+export interface RefreshResult {
+    signals: Omit<SignalInsert, 'company_id'>[]
+    discoveredUpdates: {
+        website?: string
+        employeeCount?: number
+        techStack?: string[]
+    }
+}
+
+/**
  * Refresh signals for an existing company (uses all APIs)
+ * Now returns discovered information to update company record
  */
 export async function refreshCompanySignals(
     companyName: string,
     companyId: string,
     industry?: string,
     website?: string
-): Promise<Omit<SignalInsert, 'company_id'>[]> {
+): Promise<RefreshResult> {
     console.log(`[RefreshSignals] Starting for "${companyName}" (industry: ${industry || 'unknown'})`)
     const signals: Omit<SignalInsert, 'company_id'>[] = []
+    const discoveredUpdates: RefreshResult['discoveredUpdates'] = {}
 
-    // 1. Refresh hiring signals from Adzuna
-    console.log(`[RefreshSignals] Fetching Adzuna hiring data...`)
-    try {
-        const hiringAnalysis = await analyzeHiringSignals(companyName)
-        console.log(`[RefreshSignals] Adzuna result:`, hiringAnalysis ? `${hiringAnalysis.total_jobs} jobs` : 'null')
-        if (hiringAnalysis) {
-            const hiringSignal = createHiringSignal(hiringAnalysis)
-            if (hiringSignal) {
+    // 1. RapidAPI Job Search (JSearch, LinkedIn, ActiveJobsDB) - primary source
+    if (isRapidAPIEnabled()) {
+        console.log(`[RefreshSignals] Searching RapidAPI job sources...`)
+        try {
+            const jobResults = await searchAllJobAPIs(companyName)
+            console.log(`[RefreshSignals] RapidAPI found ${jobResults.totalCount} jobs from ${jobResults.sources.join(', ')}`)
+
+            // Add all hiring signals from job analysis
+            for (const signal of jobResults.hiringSignals.signals) {
                 signals.push({
-                    signal_type: hiringSignal.signal_type,
-                    evidence_text: hiringSignal.evidence_text,
-                    source_label: 'Adzuna Jobs API',
+                    signal_type: signal.type,
+                    evidence_text: signal.text,
+                    source_label: `Jobs (${jobResults.sources.join(', ')})`,
                     signal_date: new Date().toISOString().split('T')[0],
-                    confidence: hiringSignal.confidence,
+                    confidence: signal.confidence,
                     extraction_method: 'api',
                 })
-                console.log(`[RefreshSignals] Added hiring signal: ${hiringSignal.signal_type}`)
             }
+
+            // Store tech stack for company record
+            if (jobResults.hiringSignals.techStack.length > 0) {
+                discoveredUpdates.techStack = jobResults.hiringSignals.techStack
+            }
+
+            console.log(`[RefreshSignals] Added ${jobResults.hiringSignals.signals.length} signals from job analysis`)
+        } catch (err) {
+            console.log(`[RefreshSignals] RapidAPI error:`, err instanceof Error ? err.message : 'Unknown')
         }
-    } catch (err) {
-        console.log(`[RefreshSignals] Adzuna error:`, err instanceof Error ? err.message : 'Unknown')
+    }
+
+    // 2. Fallback to Adzuna if RapidAPI not available
+    if (!isRapidAPIEnabled()) {
+        console.log(`[RefreshSignals] Fetching Adzuna hiring data (fallback)...`)
+        try {
+            const hiringAnalysis = await analyzeHiringSignals(companyName)
+            console.log(`[RefreshSignals] Adzuna result:`, hiringAnalysis ? `${hiringAnalysis.total_jobs} jobs` : 'null')
+            if (hiringAnalysis) {
+                const hiringSignal = createHiringSignal(hiringAnalysis)
+                if (hiringSignal) {
+                    signals.push({
+                        signal_type: hiringSignal.signal_type,
+                        evidence_text: hiringSignal.evidence_text,
+                        source_label: 'Adzuna Jobs API',
+                        signal_date: new Date().toISOString().split('T')[0],
+                        confidence: hiringSignal.confidence,
+                        extraction_method: 'api',
+                    })
+                    console.log(`[RefreshSignals] Added hiring signal: ${hiringSignal.signal_type}`)
+                }
+            }
+        } catch (err) {
+            console.log(`[RefreshSignals] Adzuna error:`, err instanceof Error ? err.message : 'Unknown')
+        }
     }
 
     // 2. Check FCA status for financial services companies (using new reliable lookup)
@@ -354,11 +403,9 @@ export async function refreshCompanySignals(
         }
     }
 
-    // 4. Web scraping as FALLBACK - runs when we have few signals or always if scraping enabled
-    // This ensures we try our best to find information
-    const shouldScrape = isScrapingEnabled() && (signals.length < 2 || website)
-
-    if (shouldScrape) {
+    // 5. Web scraping - ALWAYS RUN to get best results
+    // Scrape for careers page, tech stack, AI signals from website content
+    if (isScrapingEnabled()) {
         // Try to find/guess website if not provided
         let targetWebsite: string | undefined = website
         if (!targetWebsite) {
@@ -366,7 +413,9 @@ export async function refreshCompanySignals(
             const guessedWebsite = guessCompanyWebsite(companyName)
             if (guessedWebsite) {
                 targetWebsite = guessedWebsite
-                console.log(`[RefreshSignals] Guessed website: ${targetWebsite}`)
+                // IMPORTANT: Save the discovered website to update company record
+                discoveredUpdates.website = guessedWebsite
+                console.log(`[RefreshSignals] Guessed website: ${targetWebsite} - will update company record`)
             }
         }
 
@@ -441,8 +490,8 @@ export async function refreshCompanySignals(
         }
     }
 
-    console.log(`[RefreshSignals] Completed. Total signals: ${signals.length}`)
-    return signals
+    console.log(`[RefreshSignals] Completed. Total signals: ${signals.length}, Updates: ${JSON.stringify(discoveredUpdates)}`)
+    return { signals, discoveredUpdates }
 }
 
 /**

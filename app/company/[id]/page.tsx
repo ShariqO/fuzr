@@ -73,11 +73,8 @@ export default function CompanyDetailPage() {
     }, [supabase, router, companyId])
 
     const canRefresh = () => {
-        if (!lastRefreshed) return true
-        const lastDate = new Date(lastRefreshed)
-        const now = new Date()
-        const daysSinceRefresh = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
-        return daysSinceRefresh >= 7
+        // Removed weekly limit for testing - allow unlimited refreshes
+        return true
     }
 
     const handleRefresh = async () => {
