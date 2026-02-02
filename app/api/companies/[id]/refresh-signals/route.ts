@@ -48,10 +48,23 @@ export async function POST(
             last_enriched_at: new Date().toISOString(),
         }
 
-        // Update website if we discovered a new one and don't have one
-        if (discoveredUpdates.website && !company.website) {
+        // Helper to check if a URL is a placeholder/invalid website
+        const isInvalidWebsite = (url: string | null): boolean => {
+            if (!url) return true
+            const invalidPatterns = [
+                'company-information.service.gov.uk',
+                'find-and-update.company-information',
+                'companieshouse.gov.uk',
+                'placeholder',
+                'example.com',
+            ]
+            return invalidPatterns.some(pattern => url.toLowerCase().includes(pattern))
+        }
+
+        // Update website if we discovered a new one and the current one is missing or invalid
+        if (discoveredUpdates.website && isInvalidWebsite(company.website)) {
             companyUpdates.website = discoveredUpdates.website
-            console.log(`[Refresh] Updating company website to: ${discoveredUpdates.website}`)
+            console.log(`[Refresh] Updating company website from "${company.website}" to: ${discoveredUpdates.website}`)
         }
 
         // Update employee count if discovered
