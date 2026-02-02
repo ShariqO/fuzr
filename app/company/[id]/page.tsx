@@ -22,6 +22,16 @@ export default function CompanyDetailPage() {
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [lastRefreshed, setLastRefreshed] = useState<string | null>(null)
 
+    // Industry trends state
+    const [industryTrends, setIndustryTrends] = useState<{
+        overview: string
+        trends: Array<{ trend: string; description: string; impact: 'high' | 'medium' | 'low' }>
+        techAcquisitions: string[]
+        futureNeeds: string[]
+        sellingOpportunities: string[]
+    } | null>(null)
+    const [loadingTrends, setLoadingTrends] = useState(false)
+
     useEffect(() => {
         async function loadCompanyData() {
             const { data: { user } } = await supabase.auth.getUser()
@@ -68,10 +78,35 @@ export default function CompanyDetailPage() {
             }
 
             setLoading(false)
+
+            // Load industry trends after initial data loads
+            loadIndustryTrends((companyData as Company).name, (companyData as Company).industry)
         }
 
         loadCompanyData()
     }, [supabase, router, companyId])
+
+    // Load industry trends from AI
+    const loadIndustryTrends = async (companyName: string, industry: string | null) => {
+        if (!industry) return
+
+        setLoadingTrends(true)
+        try {
+            const response = await fetch('/api/industry-trends', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ companyName, industry }),
+            })
+
+            if (response.ok) {
+                const data = await response.json()
+                setIndustryTrends(data.insights)
+            }
+        } catch (err) {
+            console.error('Failed to load industry trends:', err)
+        }
+        setLoadingTrends(false)
+    }
 
     const canRefresh = () => {
         // Removed weekly limit for testing - allow unlimited refreshes
@@ -436,6 +471,97 @@ export default function CompanyDetailPage() {
                     </CardContent>
                 </Card>
             )}
+
+            {/* Industry Trends Section */}
+            <Card className="mb-6 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border-indigo-200 dark:border-indigo-800">
+                <CardContent>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                            <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                            </svg>
+                            Industry Trends: {company.industry}
+                        </h3>
+                        {loadingTrends && (
+                            <span className="text-sm text-indigo-600 animate-pulse">Analyzing industry...</span>
+                        )}
+                    </div>
+
+                    {industryTrends ? (
+                        <div className="space-y-4">
+                            {/* Overview */}
+                            <p className="text-gray-700 dark:text-gray-300">{industryTrends.overview}</p>
+
+                            {/* Current Trends */}
+                            <div>
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Current Industry Trends</p>
+                                <div className="space-y-2">
+                                    {industryTrends.trends.map((trend, idx) => (
+                                        <div key={idx} className="flex items-start gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                                            <span className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${trend.impact === 'high' ? 'bg-red-500' :
+                                                    trend.impact === 'medium' ? 'bg-amber-500' : 'bg-gray-400'
+                                                }`} />
+                                            <div>
+                                                <p className="font-medium text-gray-900 dark:text-white">{trend.trend}</p>
+                                                <p className="text-sm text-gray-600 dark:text-gray-400">{trend.description}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Tech Acquisitions */}
+                            <div>
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    🛒 What Companies Will Buy
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                    {industryTrends.techAcquisitions.map((tech, idx) => (
+                                        <span key={idx} className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-sm">
+                                            {tech}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Future Needs */}
+                            <div>
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    🔮 Predicted Future Needs
+                                </p>
+                                <ul className="space-y-1">
+                                    {industryTrends.futureNeeds.map((need, idx) => (
+                                        <li key={idx} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                            <span className="text-indigo-500 mt-0.5">→</span>
+                                            {need}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+
+                            {/* Selling Opportunities */}
+                            <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
+                                <p className="text-sm font-medium text-green-700 dark:text-green-300 mb-2">
+                                    💰 Selling Opportunities
+                                </p>
+                                <ul className="space-y-2">
+                                    {industryTrends.sellingOpportunities.map((opp, idx) => (
+                                        <li key={idx} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                            <span className="text-green-500 font-bold">✓</span>
+                                            {opp}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                    ) : !loadingTrends ? (
+                        <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                            <p>No industry data available</p>
+                            <p className="text-sm mt-1">Industry trends will appear when available</p>
+                        </div>
+                    ) : null}
+                </CardContent>
+            </Card>
 
             {/* Signal Recommendations Panel */}
             {signals.length > 0 && (() => {

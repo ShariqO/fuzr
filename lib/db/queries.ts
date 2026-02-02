@@ -203,17 +203,18 @@ export async function getRecommendationsWithCompanies(
 
 /**
  * Check if company exists by company number
+ * Returns basic fields needed for enrichment
  */
 export async function findCompanyByNumber(
     supabase: SupabaseClientAny,
     companyNumber: string
-): Promise<{ id: string; name: string } | null> {
+): Promise<{ id: string; name: string; industry: string | null; website: string | null } | null> {
     const { data, error } = await supabase
         .from('companies')
-        .select('id, name')
+        .select('id, name, industry, website')
         .eq('company_number', companyNumber)
         .single()
 
     if (error && error.code !== 'PGRST116') throw error
-    return data as { id: string; name: string } | null
+    return data as { id: string; name: string; industry: string | null; website: string | null } | null
 }
