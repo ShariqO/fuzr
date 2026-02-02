@@ -246,76 +246,110 @@ export async function refreshCompanySignals(
     companyId: string,
     industry?: string
 ): Promise<Omit<SignalInsert, 'company_id'>[]> {
+    console.log(`[RefreshSignals] Starting for "${companyName}" (industry: ${industry || 'unknown'})`)
     const signals: Omit<SignalInsert, 'company_id'>[] = []
 
-    // 1. Refresh hiring signals
-    const hiringAnalysis = await analyzeHiringSignals(companyName)
-    if (hiringAnalysis) {
-        const hiringSignal = createHiringSignal(hiringAnalysis)
-        if (hiringSignal) {
-            signals.push({
-                signal_type: hiringSignal.signal_type,
-                evidence_text: hiringSignal.evidence_text,
-                source_label: 'Adzuna Jobs API',
-                signal_date: new Date().toISOString().split('T')[0],
-                confidence: hiringSignal.confidence,
-                extraction_method: 'api',
-            })
+    // 1. Refresh hiring signals from Adzuna
+    console.log(`[RefreshSignals] Fetching Adzuna hiring data...`)
+    try {
+        const hiringAnalysis = await analyzeHiringSignals(companyName)
+        console.log(`[RefreshSignals] Adzuna result:`, hiringAnalysis ? `${hiringAnalysis.total_jobs} jobs` : 'null')
+        if (hiringAnalysis) {
+            const hiringSignal = createHiringSignal(hiringAnalysis)
+            if (hiringSignal) {
+                signals.push({
+                    signal_type: hiringSignal.signal_type,
+                    evidence_text: hiringSignal.evidence_text,
+                    source_label: 'Adzuna Jobs API',
+                    signal_date: new Date().toISOString().split('T')[0],
+                    confidence: hiringSignal.confidence,
+                    extraction_method: 'api',
+                })
+                console.log(`[RefreshSignals] Added hiring signal: ${hiringSignal.signal_type}`)
+            }
         }
+    } catch (err) {
+        console.error(`[RefreshSignals] Adzuna error:`, err)
     }
 
     // 2. Check FCA status if financial services
     if (industry === 'Financial Services') {
-        const fcaStatus = await checkFCAStatus(companyName)
-        if (fcaStatus.isRegulated && fcaStatus.signals.length > 0) {
-            for (const signal of fcaStatus.signals) {
-                signals.push({
-                    signal_type: signal.type,
-                    evidence_text: signal.text,
-                    source_label: 'FCA Register',
-                    signal_date: new Date().toISOString().split('T')[0],
-                    confidence: signal.confidence,
-                    extraction_method: 'api',
-                })
+        console.log(`[RefreshSignals] Checking FCA Register...`)
+        try {
+            const fcaStatus = await checkFCAStatus(companyName)
+            console.log(`[RefreshSignals] FCA result: regulated=${fcaStatus.isRegulated}, signals=${fcaStatus.signals.length}`)
+            if (fcaStatus.isRegulated && fcaStatus.signals.length > 0) {
+                for (const signal of fcaStatus.signals) {
+                    signals.push({
+                        signal_type: signal.type,
+                        evidence_text: signal.text,
+                        source_label: 'FCA Register',
+                        signal_date: new Date().toISOString().split('T')[0],
+                        confidence: signal.confidence,
+                        extraction_method: 'api',
+                    })
+                }
+                console.log(`[RefreshSignals] Added ${fcaStatus.signals.length} FCA signals`)
             }
+        } catch (err) {
+            console.error(`[RefreshSignals] FCA error:`, err)
         }
     }
 
     // 3. Refresh news signals from all sources
     const allNewsTexts: Array<{ text: string; source: string }> = []
 
+    console.log(`[RefreshSignals] News API enabled: ${isNewsAPIEnabled()}`)
     if (isNewsAPIEnabled()) {
-        const newsApiArticles = await searchCompanyNews(companyName, {
-            includeIndustryNews: true,
-            industry,
-            daysBack: 30,
-        })
-        const newsApiTexts = getNewsForAIProcessing(newsApiArticles)
-        allNewsTexts.push(...newsApiTexts.map(n => ({ text: n.text, source: n.source })))
-    }
-
-    const googleNews = await fetchNewsFromMultipleSources(companyName)
-    const googleNewsTexts = getNewsTextForProcessing(googleNews)
-    allNewsTexts.push(...googleNewsTexts)
-
-    if (allNewsTexts.length > 0) {
-        const extractedSignals = await extractSignalsFromMultipleTexts(
-            allNewsTexts,
-            companyName
-        )
-
-        for (const signal of extractedSignals) {
-            signals.push({
-                signal_type: signal.signal_type,
-                evidence_text: signal.evidence_text,
-                source_label: signal.source_label,
-                signal_date: signal.signal_date || new Date().toISOString().split('T')[0],
-                confidence: signal.confidence,
-                extraction_method: 'ai_extracted',
+        try {
+            const newsApiArticles = await searchCompanyNews(companyName, {
+                includeIndustryNews: true,
+                industry,
+                daysBack: 30,
             })
+            console.log(`[RefreshSignals] NewsAPI returned ${newsApiArticles.length} articles`)
+            const newsApiTexts = getNewsForAIProcessing(newsApiArticles)
+            allNewsTexts.push(...newsApiTexts.map(n => ({ text: n.text, source: n.source })))
+        } catch (err) {
+            console.error(`[RefreshSignals] NewsAPI error:`, err)
         }
     }
 
+    try {
+        const googleNews = await fetchNewsFromMultipleSources(companyName)
+        console.log(`[RefreshSignals] Google News returned ${googleNews.length} articles`)
+        const googleNewsTexts = getNewsTextForProcessing(googleNews)
+        allNewsTexts.push(...googleNewsTexts)
+    } catch (err) {
+        console.error(`[RefreshSignals] Google News error:`, err)
+    }
+
+    console.log(`[RefreshSignals] Total news texts for AI processing: ${allNewsTexts.length}`)
+
+    if (allNewsTexts.length > 0) {
+        try {
+            const extractedSignals = await extractSignalsFromMultipleTexts(
+                allNewsTexts,
+                companyName
+            )
+            console.log(`[RefreshSignals] AI extracted ${extractedSignals.length} signals from news`)
+
+            for (const signal of extractedSignals) {
+                signals.push({
+                    signal_type: signal.signal_type,
+                    evidence_text: signal.evidence_text,
+                    source_label: signal.source_label,
+                    signal_date: signal.signal_date || new Date().toISOString().split('T')[0],
+                    confidence: signal.confidence,
+                    extraction_method: 'ai_extracted',
+                })
+            }
+        } catch (err) {
+            console.error(`[RefreshSignals] AI extraction error:`, err)
+        }
+    }
+
+    console.log(`[RefreshSignals] Completed. Total signals: ${signals.length}`)
     return signals
 }
 

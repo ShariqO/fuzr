@@ -26,14 +26,24 @@ export async function POST(
             return NextResponse.json({ error: 'Company not found' }, { status: 404 })
         }
 
-        // Refresh signals using the pipeline
-        const newSignals = await refreshCompanySignals(company.name, companyId)
+        console.log(`[Refresh] Starting refresh for ${company.name} (${companyId})`)
+        console.log(`[Refresh] Industry: ${company.industry}`)
+
+        // Refresh signals using the pipeline - pass industry for FCA lookup
+        const newSignals = await refreshCompanySignals(company.name, companyId, company.industry || undefined)
+
+        console.log(`[Refresh] Got ${newSignals.length} signals from pipeline`)
 
         if (newSignals.length === 0) {
+            // Update last_enriched_at even if no signals found
+            await updateCompany(supabase, companyId, {
+                last_enriched_at: new Date().toISOString(),
+            })
+
             return NextResponse.json({
                 success: true,
                 signals_added: 0,
-                message: 'No new signals found',
+                message: 'No new signals found. APIs may be rate limited or company not in any feeds.',
             })
         }
 
