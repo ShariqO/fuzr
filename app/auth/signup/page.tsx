@@ -146,7 +146,13 @@ export default function SignUpPage() {
                                     {passwordChecks.map((check, idx) => (
                                         <div key={idx} className="flex items-center gap-2 text-xs">
                                             <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${check.met ? 'bg-success-100 text-success-600' : 'bg-gray-100 text-gray-400'}`}>
-                                                {check.met ? '✓' : '○'}
+                                                {check.met ? (
+                                                    <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                ) : (
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-current opacity-40" />
+                                                )}
                                             </span>
                                             <span className={check.met ? 'text-success-600' : 'text-gray-500'}>
                                                 {check.label}

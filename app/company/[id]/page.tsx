@@ -264,8 +264,11 @@ export default function CompanyDetailPage() {
                                 </svg>
                             </div>
                             <p className="text-error-600 dark:text-error-400 mb-4">{error || 'Company not found'}</p>
-                            <Button variant="secondary" onClick={() => router.push('/dashboard')}>
-                                ← Back to Dashboard
+                            <Button variant="secondary" onClick={() => router.push('/dashboard')} className="flex items-center gap-2">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                                Back to Dashboard
                             </Button>
                         </CardContent>
                     </Card>
@@ -499,7 +502,7 @@ export default function CompanyDetailPage() {
                                     {industryTrends.trends.map((trend, idx) => (
                                         <div key={idx} className="flex items-start gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
                                             <span className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${trend.impact === 'high' ? 'bg-red-500' :
-                                                    trend.impact === 'medium' ? 'bg-amber-500' : 'bg-gray-400'
+                                                trend.impact === 'medium' ? 'bg-amber-500' : 'bg-gray-400'
                                                 }`} />
                                             <div>
                                                 <p className="font-medium text-gray-900 dark:text-white">{trend.trend}</p>
@@ -512,8 +515,11 @@ export default function CompanyDetailPage() {
 
                             {/* Tech Acquisitions */}
                             <div>
-                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    🛒 What Companies Will Buy
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                                    <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                    What Companies Will Buy
                                 </p>
                                 <div className="flex flex-wrap gap-2">
                                     {industryTrends.techAcquisitions.map((tech, idx) => (
@@ -526,13 +532,19 @@ export default function CompanyDetailPage() {
 
                             {/* Future Needs */}
                             <div>
-                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    🔮 Predicted Future Needs
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                                    <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    Predicted Future Needs
                                 </p>
                                 <ul className="space-y-1">
                                     {industryTrends.futureNeeds.map((need, idx) => (
                                         <li key={idx} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                            <span className="text-indigo-500 mt-0.5">→</span>
+                                            <svg className="w-4 h-4 text-indigo-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                            </svg>
                                             {need}
                                         </li>
                                     ))}
@@ -541,13 +553,18 @@ export default function CompanyDetailPage() {
 
                             {/* Selling Opportunities */}
                             <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
-                                <p className="text-sm font-medium text-green-700 dark:text-green-300 mb-2">
-                                    💰 Selling Opportunities
+                                <p className="text-sm font-medium text-green-700 dark:text-green-300 mb-2 flex items-center gap-2">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Selling Opportunities
                                 </p>
                                 <ul className="space-y-2">
                                     {industryTrends.sellingOpportunities.map((opp, idx) => (
                                         <li key={idx} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
-                                            <span className="text-green-500 font-bold">✓</span>
+                                            <svg className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                            </svg>
                                             {opp}
                                         </li>
                                     ))}
@@ -603,7 +620,9 @@ export default function CompanyDetailPage() {
                                     <ul className="space-y-2">
                                         {signalRecs.topOpportunities.map((opp, idx) => (
                                             <li key={idx} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                                <span className="text-success-500 mt-0.5">✓</span>
+                                                <svg className="w-4 h-4 text-success-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                </svg>
                                                 {opp}
                                             </li>
                                         ))}
@@ -637,7 +656,11 @@ export default function CompanyDetailPage() {
 
                     {signals.length === 0 ? (
                         <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                            <div className="text-4xl mb-2">📡</div>
+                            <div className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                            </div>
                             <p>No signals found for this company</p>
                         </div>
                     ) : (
