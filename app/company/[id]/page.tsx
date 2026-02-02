@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useParams } from 'next/navigation'
 import type { Company, Signal, Recommendation } from '@/types/database'
 import { DashboardLayout, PageHeader, Card, CardContent, Button, Modal, SalesAssistantChat } from '@/components'
+import { getSignalIndication, generateRecommendations, getPriorityColor } from '@/lib/signals/signal-indications'
 
 export default function CompanyDetailPage() {
     const router = useRouter()
@@ -436,6 +437,71 @@ export default function CompanyDetailPage() {
                 </Card>
             )}
 
+            {/* Signal Recommendations Panel */}
+            {signals.length > 0 && (() => {
+                const signalRecs = generateRecommendations(signals, company.name)
+                const priorityColors = getPriorityColor(signalRecs.priorityLevel)
+                return (
+                    <Card className="mb-6">
+                        <CardContent>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-semibold text-gray-900 dark:text-white">Sales Intelligence Summary</h3>
+                                <span
+                                    className="px-3 py-1 rounded-full text-sm font-medium uppercase"
+                                    style={{ backgroundColor: priorityColors.bg, color: priorityColors.text }}
+                                >
+                                    {signalRecs.priorityLevel} Priority
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Opportunity Score</p>
+                                    <p className="text-2xl font-bold text-primary-600">{signalRecs.overallScore}/100</p>
+                                </div>
+                                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Signals Detected</p>
+                                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{signals.length}</p>
+                                </div>
+                                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Best Time to Reach</p>
+                                    <p className="text-lg font-medium text-success-600">{signalRecs.bestTimeToReach}</p>
+                                </div>
+                            </div>
+
+                            <p className="text-gray-700 dark:text-gray-300 mb-4">{signalRecs.summary}</p>
+
+                            {signalRecs.topOpportunities.length > 0 && (
+                                <div className="mb-4">
+                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Key Opportunities</p>
+                                    <ul className="space-y-2">
+                                        {signalRecs.topOpportunities.map((opp, idx) => (
+                                            <li key={idx} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                                <span className="text-success-500 mt-0.5">✓</span>
+                                                {opp}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {signalRecs.suggestedActions.length > 0 && (
+                                <div>
+                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Suggested Actions</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {signalRecs.suggestedActions.map((action, idx) => (
+                                            <span key={idx} className="px-3 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 rounded-full text-sm">
+                                                {action}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                )
+            })()}
+
             {/* Signals */}
             <Card>
                 <CardContent>
@@ -450,28 +516,45 @@ export default function CompanyDetailPage() {
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            {signals.map((signal) => (
-                                <div
-                                    key={signal.id}
-                                    className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                                >
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-medium text-gray-900 dark:text-white">
-                                                {signal.signal_type}
+                            {signals.map((signal) => {
+                                const indication = getSignalIndication(signal.signal_type)
+                                const urgencyColor = indication.urgency === 'high' ? '#ef4444' : indication.urgency === 'medium' ? '#f59e0b' : '#6b7280'
+                                return (
+                                    <div
+                                        key={signal.id}
+                                        className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                                    >
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <span
+                                                    className="w-2 h-2 rounded-full"
+                                                    style={{ backgroundColor: urgencyColor }}
+                                                />
+                                                <span className="font-medium text-gray-900 dark:text-white">
+                                                    {signal.signal_type}
+                                                </span>
+                                                {getRecencyBadge(signal.signal_date)}
+                                            </div>
+                                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                                                {new Date(signal.signal_date).toLocaleDateString()}
                                             </span>
-                                            {getRecencyBadge(signal.signal_date)}
                                         </div>
-                                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                                            {new Date(signal.signal_date).toLocaleDateString()}
-                                        </span>
+                                        <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{signal.evidence_text}</p>
+
+                                        {/* Signal Indication - what this means */}
+                                        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4" style={{ borderColor: urgencyColor }}>
+                                            <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">What This Means:</p>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">{indication.indication}</p>
+                                            <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2 mb-1">Sales Opportunity:</p>
+                                            <p className="text-sm text-primary-600 dark:text-primary-400">{indication.salesOpportunity}</p>
+                                        </div>
+
+                                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                                            Source: {signal.source_label}
+                                        </p>
                                     </div>
-                                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{signal.evidence_text}</p>
-                                    <p className="text-xs text-gray-400 dark:text-gray-500">
-                                        Source: {signal.source_label}
-                                    </p>
-                                </div>
-                            ))}
+                                )
+                            })}
                         </div>
                     )}
                 </CardContent>

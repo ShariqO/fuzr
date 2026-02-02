@@ -490,8 +490,35 @@ export async function refreshCompanySignals(
         }
     }
 
-    console.log(`[RefreshSignals] Completed. Total signals: ${signals.length}, Updates: ${JSON.stringify(discoveredUpdates)}`)
-    return { signals, discoveredUpdates }
+    // Deduplicate signals - remove duplicates based on signal_type + similar evidence
+    const deduplicatedSignals = deduplicateSignals(signals)
+
+    console.log(`[RefreshSignals] Completed. Total signals: ${deduplicatedSignals.length} (deduplicated from ${signals.length}), Updates: ${JSON.stringify(discoveredUpdates)}`)
+    return { signals: deduplicatedSignals, discoveredUpdates }
+}
+
+/**
+ * Deduplicate signals - keep unique signals based on type and evidence
+ */
+function deduplicateSignals(signals: Omit<SignalInsert, 'company_id'>[]): Omit<SignalInsert, 'company_id'>[] {
+    const seen = new Map<string, Omit<SignalInsert, 'company_id'>>()
+
+    for (const signal of signals) {
+        // Create a key based on signal type + normalized evidence
+        const evidenceNormalized = signal.evidence_text
+            .toLowerCase()
+            .replace(/\d+/g, 'X')  // Replace numbers with X for similarity
+            .slice(0, 100)  // Use first 100 chars for comparison
+        const key = `${signal.signal_type}:${evidenceNormalized}`
+
+        // Keep the signal with higher confidence
+        const existing = seen.get(key)
+        if (!existing || (signal.confidence || 0) > (existing.confidence || 0)) {
+            seen.set(key, signal)
+        }
+    }
+
+    return Array.from(seen.values())
 }
 
 /**
