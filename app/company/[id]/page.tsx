@@ -32,6 +32,25 @@ export default function CompanyDetailPage() {
     } | null>(null)
     const [loadingTrends, setLoadingTrends] = useState(false)
 
+    // Company insights state (how company responds to trends)
+    const [companyInsights, setCompanyInsights] = useState<{
+        initiatives: Array<{
+            initiative: string
+            relatedTrend: string
+            source: string
+            sourceUrl?: string
+            confidence: 'high' | 'medium' | 'low'
+        }>
+        recentNews: Array<{
+            title: string
+            source: string
+            url: string
+            summary: string
+        }>
+        trendAlignment: string
+    } | null>(null)
+    const [loadingInsights, setLoadingInsights] = useState(false)
+
     useEffect(() => {
         async function loadCompanyData() {
             const { data: { user } } = await supabase.auth.getUser()
@@ -80,14 +99,14 @@ export default function CompanyDetailPage() {
             setLoading(false)
 
             // Load industry trends after initial data loads
-            loadIndustryTrends((companyData as Company).name, (companyData as Company).industry)
+            loadIndustryTrends((companyData as Company).name, (companyData as Company).industry, (companyData as Company).website)
         }
 
         loadCompanyData()
     }, [supabase, router, companyId])
 
     // Load industry trends from AI
-    const loadIndustryTrends = async (companyName: string, industry: string | null) => {
+    const loadIndustryTrends = async (companyName: string, industry: string | null, website: string | null) => {
         if (!industry) return
 
         setLoadingTrends(true)
@@ -101,11 +120,46 @@ export default function CompanyDetailPage() {
             if (response.ok) {
                 const data = await response.json()
                 setIndustryTrends(data.insights)
+
+                // After trends load, load company insights
+                if (data.insights?.trends) {
+                    loadCompanyInsights(companyName, industry, website, data.insights.trends)
+                }
             }
         } catch (err) {
             console.error('Failed to load industry trends:', err)
         }
         setLoadingTrends(false)
+    }
+
+    // Load company insights - how the company responds to trends
+    const loadCompanyInsights = async (
+        companyName: string,
+        industry: string | null,
+        website: string | null,
+        trends: Array<{ trend: string; description: string }>
+    ) => {
+        setLoadingInsights(true)
+        try {
+            const response = await fetch('/api/company-insights', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    companyName,
+                    industry,
+                    website,
+                    trends: trends.map(t => t.trend),
+                }),
+            })
+
+            if (response.ok) {
+                const data = await response.json()
+                setCompanyInsights(data.insights)
+            }
+        } catch (err) {
+            console.error('Failed to load company insights:', err)
+        }
+        setLoadingInsights(false)
     }
 
     const canRefresh = () => {
@@ -569,6 +623,76 @@ export default function CompanyDetailPage() {
                                         </li>
                                     ))}
                                 </ul>
+                            </div>
+
+                            {/* Company Response to Trends */}
+                            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                                <div className="flex items-center justify-between mb-3">
+                                    <p className="text-sm font-medium text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                        </svg>
+                                        How {company.name} is Responding
+                                    </p>
+                                    {loadingInsights && (
+                                        <span className="text-xs text-blue-500 animate-pulse">Analyzing news & blog...</span>
+                                    )}
+                                </div>
+
+                                {companyInsights ? (
+                                    <div className="space-y-3">
+                                        {/* Trend Alignment Summary */}
+                                        <p className="text-sm text-gray-700 dark:text-gray-300 italic">
+                                            {companyInsights.trendAlignment}
+                                        </p>
+
+                                        {/* Company Initiatives */}
+                                        {companyInsights.initiatives.length > 0 && (
+                                            <div className="space-y-2">
+                                                {companyInsights.initiatives.map((init, idx) => (
+                                                    <div key={idx} className="flex items-start gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg">
+                                                        <span className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${init.confidence === 'high' ? 'bg-blue-500' :
+                                                                init.confidence === 'medium' ? 'bg-blue-400' : 'bg-blue-300'
+                                                            }`} />
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm text-gray-800 dark:text-gray-200">{init.initiative}</p>
+                                                            <div className="flex items-center gap-2 mt-1">
+                                                                <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 rounded">
+                                                                    {init.relatedTrend}
+                                                                </span>
+                                                                <span className="text-xs text-gray-500">{init.source}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Recent News */}
+                                        {companyInsights.recentNews.length > 0 && (
+                                            <div className="pt-2 border-t border-blue-200 dark:border-blue-700">
+                                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Recent News</p>
+                                                <div className="space-y-1">
+                                                    {companyInsights.recentNews.slice(0, 3).map((news, idx) => (
+                                                        <a
+                                                            key={idx}
+                                                            href={news.url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="block text-xs text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 truncate"
+                                                        >
+                                                            <span className="text-gray-400">{news.source}:</span> {news.title}
+                                                        </a>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : !loadingInsights ? (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                        No recent news or blog content found for analysis.
+                                    </p>
+                                ) : null}
                             </div>
                         </div>
                     ) : !loadingTrends ? (
