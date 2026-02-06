@@ -153,12 +153,36 @@ ${initialCompany ? `I see you want to reach out to **${initialCompany}**. Would 
     }
 
     const quickActions = [
-        { label: 'Research company', prompt: companyContext ? `Research ${companyContext.name}` : 'Research this company', icon: '🔍' },
-        { label: 'Find contacts', prompt: companyContext ? `Find key contacts at ${companyContext.name}` : 'Find key contacts', icon: '👥' },
-        { label: 'Cold email', prompt: 'Write a cold outreach email', icon: '📧' },
-        { label: 'LinkedIn message', prompt: 'Write a LinkedIn connection request', icon: '💼' },
-        { label: 'Follow-up', prompt: 'Write a follow-up email', icon: '🔄' },
-        { label: 'Call script', prompt: 'Create a cold call script', icon: '📞' },
+        {
+            label: 'Research company',
+            prompt: companyContext ? `Research ${companyContext.name}` : 'Research this company',
+            icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+        },
+        {
+            label: 'Find contacts',
+            prompt: companyContext ? `Find key contacts at ${companyContext.name}` : 'Find key contacts',
+            icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+        },
+        {
+            label: 'Cold email',
+            prompt: 'Write a cold outreach email',
+            icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+        },
+        {
+            label: 'LinkedIn message',
+            prompt: 'Write a LinkedIn connection request',
+            icon: <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
+        },
+        {
+            label: 'Follow-up',
+            prompt: 'Write a follow-up email',
+            icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+        },
+        {
+            label: 'Call script',
+            prompt: 'Create a cold call script',
+            icon: <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+        },
     ]
 
     return (
@@ -259,8 +283,11 @@ ${initialCompany ? `I see you want to reach out to **${initialCompany}**. Would 
                             <div className="bg-gray-100 rounded-2xl px-4 py-3">
                                 <div className="flex items-center gap-2">
                                     {isResearching ? (
-                                        <span className="text-sm text-gray-600">
-                                            <span className="animate-pulse">🔍</span> Researching company...
+                                        <span className="text-sm text-gray-600 flex items-center gap-2">
+                                            <svg className="w-4 h-4 animate-pulse text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                            </svg>
+                                            Researching company...
                                         </span>
                                     ) : (
                                         <>
