@@ -61,16 +61,27 @@ export async function updateSession(request: NextRequest) {
     const pathname = request.nextUrl.pathname
 
     // If user is authenticated and trying to access protected routes
+    // We check if the path is NOT a public route (like onboarding)
     if (user && !PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
-        // Check if user has a profile
+        // Check if user has a COMPLETE profile
+        // We select key fields that mark a profile as "onboarded"
         const { data: profile } = await supabase
             .from('profiles')
-            .select('user_id, full_name')
+            .select('role, selling_category, target_industries')
             .eq('user_id', user.id)
             .single()
 
-        // If no profile exists, redirect to onboarding
-        if (!profile) {
+        // logic:
+        // 1. If no profile record exists -> Redirect
+        // 2. If profile exists but missing key fields -> Redirect
+        const isProfileComplete =
+            profile &&
+            profile.role &&
+            profile.selling_category &&
+            profile.target_industries &&
+            profile.target_industries.length > 0
+
+        if (!isProfileComplete) {
             const url = request.nextUrl.clone()
             url.pathname = '/onboarding'
             return NextResponse.redirect(url)
