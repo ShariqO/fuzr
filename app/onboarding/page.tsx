@@ -14,6 +14,7 @@ export default function OnboardingPage() {
     const [loadingProfile, setLoadingProfile] = useState(true)
     const [error, setError] = useState('')
     const [userId, setUserId] = useState<string | null>(null)
+    const [isNewProfile, setIsNewProfile] = useState(true)
 
     const [formData, setFormData] = useState<ProfileFormData>({
         full_name: '',
@@ -42,7 +43,7 @@ export default function OnboardingPage() {
             setUserId(user.id)
 
             // Try to load existing profile
-            const { data: profileData } = await supabase
+            const { data: profileData, error } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('user_id', user.id)
@@ -50,7 +51,8 @@ export default function OnboardingPage() {
 
             const profile = profileData as unknown as Profile
 
-            if (profile) {
+            if (profile && !error) {
+                setIsNewProfile(false)
                 setFormData({
                     full_name: profile.full_name,
                     role: profile.role,
@@ -66,6 +68,9 @@ export default function OnboardingPage() {
                     employer_company_name: (profile as any).employer_company_name || '',
                     employer_position: (profile as any).employer_position || '',
                 })
+            } else {
+                // No existing profile - this is a new user
+                setIsNewProfile(true)
             }
 
             setLoadingProfile(false)
@@ -91,20 +96,33 @@ export default function OnboardingPage() {
             // Validate with Zod
             const validated = ProfileSchema.parse(formData)
 
-            // Save to database - cast the entire operation chain to handle type inference
+            const now = new Date().toISOString()
+
+            // Build profile data with proper timestamps
+            const profileData = {
+                user_id: userId!,
+                ...validated,
+                updated_at: now,
+                // Only set created_at on first creation
+                ...(isNewProfile && { created_at: now }),
+            }
+
+            // Save to database
             const { error: upsertError } = await supabase
                 .from('profiles')
-                .upsert({
-                    user_id: userId!,
-                    ...validated,
-                    updated_at: new Date().toISOString(),
-                } as any)
+                .upsert(profileData as any)
 
             if (upsertError) throw upsertError
 
             router.push('/dashboard')
         } catch (err: any) {
-            setError(err.message || 'Failed to save profile')
+            // Handle Zod validation errors more gracefully
+            if (err.errors && Array.isArray(err.errors)) {
+                const messages = err.errors.map((e: any) => e.message).join(', ')
+                setError(messages)
+            } else {
+                setError(err.message || 'Failed to save profile')
+            }
             setLoading(false)
         }
     }

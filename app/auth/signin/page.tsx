@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button, Card, CardContent } from '@/components'
 
@@ -12,7 +12,11 @@ export default function SignInPage() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const router = useRouter()
+    const searchParams = useSearchParams()
     const supabase = createClient()
+
+    // Get redirect destination from query params (set by middleware for protected routes)
+    const redirectTo = searchParams.get('redirect') || '/dashboard'
 
     const handleSignIn = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -28,9 +32,11 @@ export default function SignInPage() {
             setError(error.message)
             setLoading(false)
         } else {
-            router.push('/dashboard')
+            // Redirect to original destination or dashboard
+            router.push(redirectTo)
         }
     }
+
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-soft px-4">
