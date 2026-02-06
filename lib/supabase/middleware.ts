@@ -60,6 +60,16 @@ export async function updateSession(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     const pathname = request.nextUrl.pathname
 
+    // Active session handling:
+    // If user is logged in and visits the landing page ('/') or auth pages, redirect to dashboard
+    if (user) {
+        if (pathname === '/' || pathname.startsWith('/auth/signin') || pathname.startsWith('/auth/signup')) {
+            const url = request.nextUrl.clone()
+            url.pathname = '/dashboard'
+            return NextResponse.redirect(url)
+        }
+    }
+
     // If user is authenticated and trying to access protected routes
     // We check if the path is NOT a public route (like onboarding)
     if (user && !PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
