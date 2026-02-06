@@ -660,7 +660,6 @@ export default function CompanyDetailPage() {
                                                                 <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 rounded">
                                                                     {init.relatedTrend}
                                                                 </span>
-                                                                <span className="text-xs text-gray-500">{init.source}</span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -681,7 +680,7 @@ export default function CompanyDetailPage() {
                                                             rel="noopener noreferrer"
                                                             className="block text-xs text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 truncate"
                                                         >
-                                                            <span className="text-gray-400">{news.source}:</span> {news.title}
+                                                            {news.title}
                                                         </a>
                                                     ))}
                                                 </div>
@@ -821,10 +820,6 @@ export default function CompanyDetailPage() {
                                             <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2 mb-1">Sales Opportunity:</p>
                                             <p className="text-sm text-primary-600 dark:text-primary-400">{indication.salesOpportunity}</p>
                                         </div>
-
-                                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                                            Source: {signal.source_label}
-                                        </p>
                                     </div>
                                 )
                             })}
