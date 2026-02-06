@@ -63,7 +63,16 @@ export default function SignUpPage() {
         })
 
         if (error) {
-            setError(error.message)
+            // Translate common Supabase errors to user-friendly messages
+            let friendlyMessage = 'Unable to create account. Please try again.'
+            if (error.message.includes('already registered')) {
+                friendlyMessage = 'This email is already registered. Try signing in instead.'
+            } else if (error.message.includes('valid email')) {
+                friendlyMessage = 'Please enter a valid email address.'
+            } else if (error.message.includes('rate limit')) {
+                friendlyMessage = 'Too many attempts. Please wait a moment and try again.'
+            }
+            setError(friendlyMessage)
             setLoading(false)
         } else {
             setLoading(false)

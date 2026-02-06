@@ -42,7 +42,7 @@ export default function DashboardPage() {
             .order('score', { ascending: false })
 
         if (fetchError) {
-            setError('Failed to load recommendations')
+            setError('Unable to load your recommendations. Please refresh the page.')
         } else {
             setRecommendations(data || [])
         }
@@ -75,12 +75,12 @@ export default function DashboardPage() {
             const data = await response.json()
 
             if (!response.ok) {
-                throw new Error(data.error || 'Failed to generate recommendations')
+                throw new Error('Unable to generate recommendations right now. Please try again.')
             }
 
             await loadRecommendations()
         } catch (err: any) {
-            setError(err.message)
+            setError('Something went wrong while generating recommendations. Please try again.')
         } finally {
             setGenerating(false)
         }
@@ -129,7 +129,7 @@ export default function DashboardPage() {
             const data = await response.json()
 
             if (!response.ok) {
-                throw new Error(data.error || 'Failed to search companies')
+                throw new Error('Unable to search companies right now. Please try again.')
             }
 
             setSearchResults(data.companies || [])
@@ -137,7 +137,7 @@ export default function DashboardPage() {
                 setError('No active companies found matching your search')
             }
         } catch (err: any) {
-            setError(err.message)
+            setError('Search failed. Please check your connection and try again.')
         } finally {
             setSearching(false)
         }
@@ -158,7 +158,7 @@ export default function DashboardPage() {
             const data = await response.json()
 
             if (!response.ok) {
-                throw new Error(data.error || 'Failed to add company')
+                throw new Error('Unable to add this company. Please try again.')
             }
 
             setSearchResults(prev => prev.map(c =>
@@ -168,7 +168,7 @@ export default function DashboardPage() {
             setSearchResults(prev => prev.map(c =>
                 c.company_number === companyNumber ? { ...c, adding: false } : c
             ))
-            setError(err.message)
+            setError('Could not add company. Please try again or contact support.')
         }
     }
 

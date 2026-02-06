@@ -116,13 +116,26 @@ export default function OnboardingPage() {
 
             router.push('/dashboard')
         } catch (err: any) {
-            // Handle Zod validation errors more gracefully
+            // Handle errors with client-friendly messages
+            let userMessage = 'We couldn\'t save your profile. Please try again.'
+
             if (err.errors && Array.isArray(err.errors)) {
-                const messages = err.errors.map((e: any) => e.message).join(', ')
-                setError(messages)
-            } else {
-                setError(err.message || 'Failed to save profile')
+                // Zod validation errors - make them user-friendly
+                const fieldErrors = err.errors.map((e: any) => {
+                    const field = e.path?.join(' ') || 'field'
+                    return `Please check your ${field.replace(/_/g, ' ')}`
+                })
+                userMessage = fieldErrors.join('. ')
+            } else if (err.message?.includes('column') || err.message?.includes('schema')) {
+                // Database schema errors - likely missing migration
+                userMessage = 'We\'re updating our system. Please try again in a few minutes, or contact support if the issue persists.'
+            } else if (err.message?.includes('network') || err.message?.includes('fetch')) {
+                userMessage = 'Connection issue. Please check your internet and try again.'
+            } else if (err.message?.includes('authentication') || err.message?.includes('auth')) {
+                userMessage = 'Your session has expired. Please sign in again.'
             }
+
+            setError(userMessage)
             setLoading(false)
         }
     }

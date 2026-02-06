@@ -34,12 +34,12 @@ export default function WatchedPage() {
             const data = await response.json()
 
             if (!response.ok) {
-                throw new Error(data.error || 'Failed to load watchlist')
+                throw new Error('Unable to load your watchlist. Please refresh the page.')
             }
 
             setWatchlist(data.watchlist || [])
         } catch (err: any) {
-            setError(err.message)
+            setError('Could not load your watchlist. Please try again.')
         } finally {
             setLoading(false)
         }
@@ -68,12 +68,12 @@ export default function WatchedPage() {
 
             if (!response.ok) {
                 const data = await response.json()
-                throw new Error(data.error || 'Failed to remove from watchlist')
+                throw new Error('Unable to remove company from watchlist.')
             }
 
             setWatchlist(prev => prev.filter(w => w.company.id !== companyId))
         } catch (err: any) {
-            setError(err.message)
+            setError('Could not remove company. Please try again.')
         } finally {
             setRemoving(null)
         }

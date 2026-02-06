@@ -29,7 +29,16 @@ export default function SignInPage() {
         })
 
         if (error) {
-            setError(error.message)
+            // Translate common Supabase errors to user-friendly messages
+            let friendlyMessage = 'Unable to sign in. Please try again.'
+            if (error.message.includes('Invalid login credentials')) {
+                friendlyMessage = 'Incorrect email or password. Please try again.'
+            } else if (error.message.includes('Email not confirmed')) {
+                friendlyMessage = 'Please check your email and confirm your account first.'
+            } else if (error.message.includes('rate limit')) {
+                friendlyMessage = 'Too many attempts. Please wait a moment and try again.'
+            }
+            setError(friendlyMessage)
             setLoading(false)
         } else {
             // Redirect to original destination or dashboard
