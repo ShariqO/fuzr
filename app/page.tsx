@@ -150,9 +150,11 @@ export default function HomePage() {
                                 loop
                                 muted
                                 playsInline
+                                preload="auto"
                                 className="w-full aspect-video object-cover"
                             >
                                 <source src="/videos/PainPoints.mp4" type="video/mp4" />
+                                Your browser does not support the video tag.
                             </video>
                             <h3 className="text-xl font-semibold text-gray-900 mb-2">
                                 Identify pain points
@@ -169,9 +171,11 @@ export default function HomePage() {
                                 loop
                                 muted
                                 playsInline
+                                preload="auto"
                                 className="w-full aspect-video object-cover"
                             >
                                 <source src="/videos/Scanning.mp4" type="video/mp4" />
+                                Your browser does not support the video tag.
                             </video>
                             <h3 className="text-xl font-semibold text-gray-900 mb-2">
                                 Spot buying signals
@@ -188,9 +192,11 @@ export default function HomePage() {
                                 loop
                                 muted
                                 playsInline
+                                preload="auto"
                                 className="w-full aspect-video object-cover"
                             >
                                 <source src="/videos/DataExchange.mp4" type="video/mp4" />
+                                Your browser does not support the video tag.
                             </video>
                             <h3 className="text-xl font-semibold text-gray-900 mb-2">
                                 Personalize your outreach
