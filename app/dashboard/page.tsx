@@ -34,6 +34,10 @@ export default function DashboardPage() {
     const [sizeFilter, setSizeFilter] = useState('')
     const [confidenceFilter, setConfidenceFilter] = useState(0)
 
+    // Watchlist state
+    const [watchlistCompanies, setWatchlistCompanies] = useState<Set<string>>(new Set())
+    const [addingToWatchlist, setAddingToWatchlist] = useState<string | null>(null)
+
     const loadRecommendations = useCallback(async () => {
         setLoading(true)
         const { data, error: fetchError } = await supabase
@@ -49,6 +53,15 @@ export default function DashboardPage() {
         setLoading(false)
     }, [supabase])
 
+    const loadWatchlist = useCallback(async () => {
+        const { data } = await supabase
+            .from('watched_companies')
+            .select('company_id')
+        if (data) {
+            setWatchlistCompanies(new Set((data as { company_id: string }[]).map(w => w.company_id)))
+        }
+    }, [supabase])
+
     useEffect(() => {
         async function checkAuthAndLoadData() {
             const { data: { user } } = await supabase.auth.getUser()
@@ -58,10 +71,11 @@ export default function DashboardPage() {
             }
 
             await loadRecommendations()
+            await loadWatchlist()
         }
 
         checkAuthAndLoadData()
-    }, [supabase, router, loadRecommendations])
+    }, [supabase, router, loadRecommendations, loadWatchlist])
 
     const handleGenerate = async () => {
         setGenerating(true)
@@ -83,6 +97,25 @@ export default function DashboardPage() {
             setError('Something went wrong while generating recommendations. Please try again.')
         } finally {
             setGenerating(false)
+        }
+    }
+
+    const handleAddToWatchlist = async (companyId: string, e: React.MouseEvent) => {
+        e.stopPropagation()
+        setAddingToWatchlist(companyId)
+        try {
+            const response = await fetch('/api/watchlist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ company_id: companyId }),
+            })
+            if (response.ok) {
+                setWatchlistCompanies(prev => new Set([...prev, companyId]))
+            }
+        } catch (err) {
+            console.error('Error adding to watchlist:', err)
+        } finally {
+            setAddingToWatchlist(null)
         }
     }
 
@@ -428,6 +461,31 @@ export default function DashboardPage() {
                                             >
                                                 View
                                             </Button>
+                                            {watchlistCompanies.has(rec.company_id) ? (
+                                                <span className="text-xs text-gray-400 ml-2">In Watchlist</span>
+                                            ) : (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={(e) => handleAddToWatchlist(rec.company_id, e)}
+                                                    disabled={addingToWatchlist === rec.company_id}
+                                                    className="ml-1"
+                                                >
+                                                    {addingToWatchlist === rec.company_id ? (
+                                                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                                        </svg>
+                                                    ) : (
+                                                        <>
+                                                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                                            </svg>
+                                                            Watch
+                                                        </>
+                                                    )}
+                                                </Button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}
