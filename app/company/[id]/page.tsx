@@ -29,6 +29,14 @@ export default function CompanyDetailPage() {
 
     // Expandable signals state
     const [expandedSignals, setExpandedSignals] = useState<Set<string>>(new Set())
+    const [signalAnalyses, setSignalAnalyses] = useState<Record<string, {
+        deepAnalysis: string
+        relevanceToUser: string
+        actionableInsight: string
+        keyDetails: string[]
+        urgencyReason: string
+    } | null>>({})
+    const [loadingAnalysis, setLoadingAnalysis] = useState<string | null>(null)
 
     // Industry trends state
     const [industryTrends, setIndustryTrends] = useState<{
@@ -87,7 +95,31 @@ export default function CompanyDetailPage() {
                 .eq('company_id', companyId)
                 .order('signal_date', { ascending: false })
 
-            setSignals(signalsData || [])
+            // Client-side dedup: remove signals with same type and >60% word overlap
+            const rawSignals = (signalsData || []) as any[]
+            const deduped: any[] = []
+            for (const signal of rawSignals) {
+                const words = new Set(
+                    signal.evidence_text.toLowerCase()
+                        .replace(/[^a-z0-9\s]/g, '')
+                        .split(/\s+/)
+                        .filter((w: string) => w.length > 2)
+                )
+                const isDup = deduped.some((existing: any) => {
+                    if (existing.signal_type !== signal.signal_type) return false
+                    const existingWords = new Set(
+                        existing.evidence_text.toLowerCase()
+                            .replace(/[^a-z0-9\s]/g, '')
+                            .split(/\s+/)
+                            .filter((w: string) => w.length > 2)
+                    )
+                    const overlap = [...words].filter(w => existingWords.has(w)).length
+                    const similarity = overlap / Math.max(words.size, existingWords.size)
+                    return similarity > 0.6
+                })
+                if (!isDup) deduped.push(signal)
+            }
+            setSignals(deduped)
 
             const { data: recData } = await supabase
                 .from('recommendations')
@@ -513,7 +545,7 @@ export default function CompanyDetailPage() {
                             <p className="text-sm text-gray-500 dark:text-gray-400">Signals Detected</p>
                             <p className="text-2xl font-bold text-gray-900 dark:text-white">{signals.length}</p>
                         </div>
-                        {recommendation && (
+                        {recommendation ? (
                             <>
                                 <div>
                                     <p className="text-sm text-gray-500 dark:text-gray-400">Match Score</p>
@@ -524,6 +556,11 @@ export default function CompanyDetailPage() {
                                     <p className="text-2xl font-bold text-success-600">{Math.round(recommendation.confidence)}%</p>
                                 </div>
                             </>
+                        ) : (
+                            <div>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Match Score</p>
+                                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Generate recommendations on the dashboard to see this company&apos;s score</p>
+                            </div>
                         )}
                     </CardContent>
                 </Card>
@@ -879,15 +916,35 @@ export default function CompanyDetailPage() {
                                         key={signal.id}
                                         className="rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all cursor-pointer"
                                         onClick={() => {
-                                            setExpandedSignals(prev => {
-                                                const next = new Set(prev)
-                                                if (next.has(signal.id)) {
-                                                    next.delete(signal.id)
-                                                } else {
-                                                    next.add(signal.id)
+                                            const newExpanded = new Set(expandedSignals)
+                                            if (newExpanded.has(signal.id)) {
+                                                newExpanded.delete(signal.id)
+                                            } else {
+                                                newExpanded.add(signal.id)
+                                                // Fetch AI analysis if not already loaded
+                                                if (!signalAnalyses[signal.id] && loadingAnalysis !== signal.id) {
+                                                    setLoadingAnalysis(signal.id)
+                                                    fetch('/api/signal-analysis', {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({
+                                                            signalType: signal.signal_type,
+                                                            evidenceText: signal.evidence_text,
+                                                            companyName: company?.name,
+                                                            companyIndustry: company?.industry,
+                                                        }),
+                                                    })
+                                                        .then(res => res.json())
+                                                        .then(data => {
+                                                            setSignalAnalyses(prev => ({ ...prev, [signal.id]: data.analysis || null }))
+                                                        })
+                                                        .catch(() => {
+                                                            setSignalAnalyses(prev => ({ ...prev, [signal.id]: null }))
+                                                        })
+                                                        .finally(() => setLoadingAnalysis(null))
                                                 }
-                                                return next
-                                            })
+                                            }
+                                            setExpandedSignals(newExpanded)
                                         }}
                                     >
                                         {/* Always visible header */}
@@ -919,12 +976,55 @@ export default function CompanyDetailPage() {
                                         {isExpanded && (
                                             <div className="px-4 pb-4">
                                                 <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">{signal.evidence_text}</p>
-                                                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4" style={{ borderColor: urgencyColor }}>
-                                                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">What This Means:</p>
-                                                    <p className="text-sm text-gray-600 dark:text-gray-400">{indication.indication}</p>
-                                                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2 mb-1">Sales Opportunity:</p>
-                                                    <p className="text-sm text-primary-600 dark:text-primary-400">{indication.salesOpportunity}</p>
-                                                </div>
+
+                                                {loadingAnalysis === signal.id ? (
+                                                    <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg animate-pulse">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <svg className="w-4 h-4 animate-spin text-primary-500" fill="none" viewBox="0 0 24 24">
+                                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                                            </svg>
+                                                            <span className="text-sm text-gray-500">Generating personalized analysis...</span>
+                                                        </div>
+                                                        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2" />
+                                                        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+                                                    </div>
+                                                ) : signalAnalyses[signal.id] ? (
+                                                    <div className="space-y-3">
+                                                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-500">
+                                                            <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1">Deep Analysis</p>
+                                                            <p className="text-sm text-gray-700 dark:text-gray-300">{signalAnalyses[signal.id]!.deepAnalysis}</p>
+                                                        </div>
+                                                        <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border-l-4 border-purple-500">
+                                                            <p className="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-1">Why This Matters to You</p>
+                                                            <p className="text-sm text-gray-700 dark:text-gray-300">{signalAnalyses[signal.id]!.relevanceToUser}</p>
+                                                        </div>
+                                                        <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border-l-4 border-green-500">
+                                                            <p className="text-xs font-semibold text-green-700 dark:text-green-300 mb-1">Recommended Action</p>
+                                                            <p className="text-sm text-gray-700 dark:text-gray-300">{signalAnalyses[signal.id]!.actionableInsight}</p>
+                                                        </div>
+                                                        {signalAnalyses[signal.id]!.keyDetails && signalAnalyses[signal.id]!.keyDetails.length > 0 && (
+                                                            <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                                                                <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Key Details</p>
+                                                                <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                                                                    {signalAnalyses[signal.id]!.keyDetails.map((detail, i) => (
+                                                                        <li key={i}>{detail}</li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        )}
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400 italic">
+                                                            ⏱ {signalAnalyses[signal.id]!.urgencyReason}
+                                                        </p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4" style={{ borderColor: urgencyColor }}>
+                                                        <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">What This Means:</p>
+                                                        <p className="text-sm text-gray-600 dark:text-gray-400">{indication.indication}</p>
+                                                        <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2 mb-1">Sales Opportunity:</p>
+                                                        <p className="text-sm text-primary-600 dark:text-primary-400">{indication.salesOpportunity}</p>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
