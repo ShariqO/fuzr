@@ -120,7 +120,7 @@ export class RecommendationEngine {
     }
 
     /**
-     * Calculate signal boost score (0-40 points)
+     * Calculate signal boost score (0-30 points)
      */
     private calculateSignalBoost(signals: Signal[]): number {
         const today = new Date()
@@ -149,7 +149,7 @@ export class RecommendationEngine {
 
             // Boost for relevant signals
             if (relevantSignalTypes.includes(signal.signal_type)) {
-                signalValue *= 1.5
+                signalValue *= 2.0
             }
 
             // Negative scoring for cost cutting unless we're cost-saving
@@ -162,7 +162,7 @@ export class RecommendationEngine {
             boost += signalValue
         }
 
-        return Math.min(boost, 40) // Cap at 40 points
+        return Math.min(boost, 30) // Cap at 30 points
     }
 
     /**
@@ -240,8 +240,8 @@ export class RecommendationEngine {
         recentSignalCount: number,
         hasSemanticMatch: boolean
     ): number {
-        // Base confidence from score
-        let confidence = Math.min((score / 120) * 60, 60) // Adjusted for new max score of ~120
+        // Base confidence from score (score is 0-100)
+        let confidence = Math.min((score / 100) * 60, 60)
 
         // Evidence count boost
         confidence += Math.min(signalCount * 5, 15)
@@ -291,7 +291,7 @@ export class RecommendationEngine {
         return {
             company,
             signals,
-            score: Math.round(totalScore),
+            score: Math.min(Math.round(totalScore), 100),
             confidence,
             explanation,
         }

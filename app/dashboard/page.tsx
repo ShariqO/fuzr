@@ -433,8 +433,8 @@ export default function DashboardPage() {
                                         <td>{rec.companies.industry}</td>
                                         <td>{rec.companies.size_band}</td>
                                         <td>
-                                            <span className={`badge ${rec.confidence >= 0.7 ? 'badge-success' : rec.confidence >= 0.5 ? 'badge-warning' : 'badge-primary'}`}>
-                                                {Math.round(rec.confidence * 100)}%
+                                            <span className={`badge ${rec.confidence >= 70 ? 'badge-success' : rec.confidence >= 50 ? 'badge-warning' : 'badge-primary'}`}>
+                                                {Math.round(rec.confidence)}%
                                             </span>
                                         </td>
                                         <td>
@@ -442,10 +442,10 @@ export default function DashboardPage() {
                                                 <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
                                                     <div
                                                         className="h-full bg-pink-500 rounded-full transition-all duration-300"
-                                                        style={{ width: `${Math.round(rec.score * 100)}%` }}
+                                                        style={{ width: `${Math.round(rec.score)}%` }}
                                                     />
                                                 </div>
-                                                <span className="text-xs text-gray-500">{Math.round(rec.score * 100)}</span>
+                                                <span className="text-xs text-gray-500">{Math.round(rec.score)}</span>
                                             </div>
                                         </td>
                                         <td>

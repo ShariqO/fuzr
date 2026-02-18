@@ -27,6 +27,9 @@ export default function CompanyDetailPage() {
     const [watchlistLoading, setWatchlistLoading] = useState(false)
     const [watchlistHover, setWatchlistHover] = useState(false)
 
+    // Expandable signals state
+    const [expandedSignals, setExpandedSignals] = useState<Set<string>>(new Set())
+
     // Industry trends state
     const [industryTrends, setIndustryTrends] = useState<{
         overview: string
@@ -297,8 +300,8 @@ export default function CompanyDetailPage() {
 
         if (recommendation) {
             rows.push(['RECOMMENDATION SCORE', ''])
-            rows.push(['Overall Score', `${Math.round(recommendation.score * 100)}%`])
-            rows.push(['Confidence', `${Math.round(recommendation.confidence * 100)}%`])
+            rows.push(['Overall Score', `${Math.round(recommendation.score)}%`])
+            rows.push(['Confidence', `${Math.round(recommendation.confidence)}%`])
             rows.push(['Pitch Angle', recommendation.explanation_json.pitch_angle || ''])
             rows.push(['Match Reasons', recommendation.explanation_json.reasons.join('; ')])
             rows.push(['', ''])
@@ -514,11 +517,11 @@ export default function CompanyDetailPage() {
                             <>
                                 <div>
                                     <p className="text-sm text-gray-500 dark:text-gray-400">Match Score</p>
-                                    <p className="text-2xl font-bold text-primary-600">{Math.round(recommendation.score * 100)}%</p>
+                                    <p className="text-2xl font-bold text-primary-600">{Math.round(recommendation.score)}%</p>
                                 </div>
                                 <div>
                                     <p className="text-sm text-gray-500 dark:text-gray-400">Confidence</p>
-                                    <p className="text-2xl font-bold text-success-600">{Math.round(recommendation.confidence * 100)}%</p>
+                                    <p className="text-2xl font-bold text-success-600">{Math.round(recommendation.confidence)}%</p>
                                 </div>
                             </>
                         )}
@@ -870,15 +873,28 @@ export default function CompanyDetailPage() {
                             {signals.map((signal) => {
                                 const indication = getSignalIndication(signal.signal_type)
                                 const urgencyColor = indication.urgency === 'high' ? '#ef4444' : indication.urgency === 'medium' ? '#f59e0b' : '#6b7280'
+                                const isExpanded = expandedSignals.has(signal.id)
                                 return (
                                     <div
                                         key={signal.id}
-                                        className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                                        className="rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all cursor-pointer"
+                                        onClick={() => {
+                                            setExpandedSignals(prev => {
+                                                const next = new Set(prev)
+                                                if (next.has(signal.id)) {
+                                                    next.delete(signal.id)
+                                                } else {
+                                                    next.add(signal.id)
+                                                }
+                                                return next
+                                            })
+                                        }}
                                     >
-                                        <div className="flex justify-between items-start mb-2">
+                                        {/* Always visible header */}
+                                        <div className="p-4 flex justify-between items-center">
                                             <div className="flex items-center gap-2">
                                                 <span
-                                                    className="w-2 h-2 rounded-full"
+                                                    className="w-2 h-2 rounded-full flex-shrink-0"
                                                     style={{ backgroundColor: urgencyColor }}
                                                 />
                                                 <span className="font-medium text-gray-900 dark:text-white">
@@ -886,19 +902,31 @@ export default function CompanyDetailPage() {
                                                 </span>
                                                 {getRecencyBadge(signal.signal_date)}
                                             </div>
-                                            <span className="text-sm text-gray-500 dark:text-gray-400">
-                                                {new Date(signal.signal_date).toLocaleDateString()}
-                                            </span>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-sm text-gray-500 dark:text-gray-400">
+                                                    {new Date(signal.signal_date).toLocaleDateString()}
+                                                </span>
+                                                <svg
+                                                    className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                                                    fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                                >
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </div>
                                         </div>
-                                        <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{signal.evidence_text}</p>
 
-                                        {/* Signal Indication - what this means */}
-                                        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4" style={{ borderColor: urgencyColor }}>
-                                            <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">What This Means:</p>
-                                            <p className="text-sm text-gray-600 dark:text-gray-400">{indication.indication}</p>
-                                            <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2 mb-1">Sales Opportunity:</p>
-                                            <p className="text-sm text-primary-600 dark:text-primary-400">{indication.salesOpportunity}</p>
-                                        </div>
+                                        {/* Expandable details */}
+                                        {isExpanded && (
+                                            <div className="px-4 pb-4">
+                                                <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">{signal.evidence_text}</p>
+                                                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4" style={{ borderColor: urgencyColor }}>
+                                                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">What This Means:</p>
+                                                    <p className="text-sm text-gray-600 dark:text-gray-400">{indication.indication}</p>
+                                                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2 mb-1">Sales Opportunity:</p>
+                                                    <p className="text-sm text-primary-600 dark:text-primary-400">{indication.salesOpportunity}</p>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )
                             })}

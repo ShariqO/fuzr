@@ -507,8 +507,11 @@ function deduplicateSignals(signals: Omit<SignalInsert, 'company_id'>[]): Omit<S
         // Create a key based on signal type + normalized evidence
         const evidenceNormalized = signal.evidence_text
             .toLowerCase()
-            .replace(/\d+/g, 'X')  // Replace numbers with X for similarity
-            .slice(0, 100)  // Use first 100 chars for comparison
+            .replace(/[^a-z0-9\s]/g, '')  // Strip punctuation
+            .replace(/\s+/g, ' ')          // Collapse whitespace
+            .replace(/\d+/g, 'X')          // Replace numbers with X
+            .trim()
+            .slice(0, 150)  // Use first 150 chars for comparison
         const key = `${signal.signal_type}:${evidenceNormalized}`
 
         // Keep the signal with higher confidence
@@ -518,7 +521,25 @@ function deduplicateSignals(signals: Omit<SignalInsert, 'company_id'>[]): Omit<S
         }
     }
 
-    return Array.from(seen.values())
+    // Secondary dedup: for same signal_type, check if evidence words overlap > 80%
+    const results = Array.from(seen.values())
+    const final: Omit<SignalInsert, 'company_id'>[] = []
+
+    for (const signal of results) {
+        const words = new Set(signal.evidence_text.toLowerCase().split(/\s+/).slice(0, 50))
+        const isDuplicate = final.some(existing => {
+            if (existing.signal_type !== signal.signal_type) return false
+            const existingWords = new Set(existing.evidence_text.toLowerCase().split(/\s+/).slice(0, 50))
+            const overlap = [...words].filter(w => existingWords.has(w)).length
+            const similarity = overlap / Math.max(words.size, existingWords.size)
+            return similarity > 0.7
+        })
+        if (!isDuplicate) {
+            final.push(signal)
+        }
+    }
+
+    return final
 }
 
 /**

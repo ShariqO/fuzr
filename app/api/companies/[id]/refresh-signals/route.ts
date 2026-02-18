@@ -85,8 +85,12 @@ export async function POST(
             })
         }
 
-        // Delete old AI-extracted signals (keep manual/mock ones)
-        await deleteSignalsByMethod(supabase, companyId, ['ai_extracted', 'api', 'scraping'])
+        // Delete ALL existing signals for this company for a clean slate
+        const { error: deleteError } = await supabase
+            .from('signals')
+            .delete()
+            .eq('company_id', companyId)
+        if (deleteError) console.error('Error deleting old signals:', deleteError)
 
         // Insert new signals with company_id
         const signalsToInsert: Database['public']['Tables']['signals']['Insert'][] = newSignals.map(signal => ({
