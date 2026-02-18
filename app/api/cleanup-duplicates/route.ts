@@ -19,7 +19,7 @@ export async function POST() {
         // Get all signals grouped by company
         const { data: allSignals, error } = await supabase
             .from('signals')
-            .select('*')
+            .select('id, company_id, signal_type, evidence_text, confidence, signal_date, source_label')
             .order('created_at', { ascending: true })
 
         if (error || !allSignals) {
