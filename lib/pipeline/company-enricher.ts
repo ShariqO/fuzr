@@ -27,6 +27,7 @@ import { lookupFCAStatus, generateFCASignals } from '../data-sources/fca-lookup'
 import { scrapeCompanyWebsite, generateHiringSignalFromCareers, isScrapingEnabled } from '../enrichment/web-scraper'
 import { generateEmbedding } from '../ai/embeddings'
 import { extractSignalsFromMultipleTexts, type ExtractedSignal } from '../ai/signal-extractor'
+import { createSourceLog } from '../logging/data-source-logger'
 import type { Database } from '@/types/database'
 
 type CompanyInsert = Database['public']['Tables']['companies']['Insert']
@@ -271,9 +272,11 @@ export async function refreshCompanySignals(
     // 1. RapidAPI Job Search (JSearch, LinkedIn, ActiveJobsDB) - primary source
     if (isRapidAPIEnabled()) {
         console.log(`[RefreshSignals] Searching RapidAPI job sources...`)
+        const rapidLog = createSourceLog(companyName, 'RapidAPI (JSearch, LinkedIn, ActiveJobsDB)', 'api', 'refresh')
         try {
             const jobResults = await searchAllJobAPIs(companyName)
             console.log(`[RefreshSignals] RapidAPI found ${jobResults.totalCount} jobs from ${jobResults.sources.join(', ')}`)
+            rapidLog.finish('success', `Found ${jobResults.totalCount} jobs from ${jobResults.sources.join(', ')}`, jobResults.totalCount)
 
             // Add all hiring signals from job analysis
             for (const signal of jobResults.hiringSignals.signals) {
@@ -295,12 +298,14 @@ export async function refreshCompanySignals(
             console.log(`[RefreshSignals] Added ${jobResults.hiringSignals.signals.length} signals from job analysis`)
         } catch (err) {
             console.log(`[RefreshSignals] RapidAPI error:`, err instanceof Error ? err.message : 'Unknown')
+            rapidLog.finish('error', err instanceof Error ? err.message : 'Unknown error')
         }
     }
 
     // 2. Fallback to Adzuna if RapidAPI not available
     if (!isRapidAPIEnabled()) {
         console.log(`[RefreshSignals] Fetching Adzuna hiring data (fallback)...`)
+        const adzunaLog = createSourceLog(companyName, 'Adzuna Jobs API', 'api', 'refresh')
         try {
             const hiringAnalysis = await analyzeHiringSignals(companyName)
             console.log(`[RefreshSignals] Adzuna result:`, hiringAnalysis ? `${hiringAnalysis.total_jobs} jobs` : 'null')
@@ -317,15 +322,20 @@ export async function refreshCompanySignals(
                     })
                     console.log(`[RefreshSignals] Added hiring signal: ${hiringSignal.signal_type}`)
                 }
+                adzunaLog.finish('success', `Found ${hiringAnalysis.total_jobs} jobs`, hiringAnalysis.total_jobs)
+            } else {
+                adzunaLog.finish('no_data', 'No hiring data returned')
             }
         } catch (err) {
             console.log(`[RefreshSignals] Adzuna error:`, err instanceof Error ? err.message : 'Unknown')
+            adzunaLog.finish('error', err instanceof Error ? err.message : 'Unknown error')
         }
     }
 
     // 2. Check FCA status for financial services companies (using new reliable lookup)
     if (industry === 'Financial Services') {
         console.log(`[RefreshSignals] Checking FCA Register (using lookup)...`)
+        const fcaLog = createSourceLog(companyName, 'FCA Register', 'api', 'refresh')
         try {
             const fcaInfo = await lookupFCAStatus(companyName)
             if (fcaInfo) {
@@ -342,11 +352,14 @@ export async function refreshCompanySignals(
                     })
                 }
                 console.log(`[RefreshSignals] Added ${fcaSignals.length} FCA signals`)
+                fcaLog.finish('success', `FRN: ${fcaInfo.firmReferenceNumber}, Status: ${fcaInfo.status}`, fcaSignals.length)
             } else {
                 console.log(`[RefreshSignals] Company not found in FCA Register`)
+                fcaLog.finish('no_data', 'Company not found in FCA Register')
             }
         } catch (err) {
             console.log(`[RefreshSignals] FCA error:`, err instanceof Error ? err.message : 'Unknown')
+            fcaLog.finish('error', err instanceof Error ? err.message : 'Unknown error')
         }
     }
 
@@ -355,6 +368,7 @@ export async function refreshCompanySignals(
 
     console.log(`[RefreshSignals] News API enabled: ${isNewsAPIEnabled()}`)
     if (isNewsAPIEnabled()) {
+        const newsApiLog = createSourceLog(companyName, 'NewsAPI', 'api', 'refresh')
         try {
             const newsApiArticles = await searchCompanyNews(companyName, {
                 includeIndustryNews: true,
@@ -364,29 +378,36 @@ export async function refreshCompanySignals(
             console.log(`[RefreshSignals] NewsAPI returned ${newsApiArticles.length} articles`)
             const newsApiTexts = getNewsForAIProcessing(newsApiArticles)
             allNewsTexts.push(...newsApiTexts.map(n => ({ text: n.text, source: n.source })))
+            newsApiLog.finish('success', `${newsApiArticles.length} articles fetched`, newsApiArticles.length)
         } catch (err) {
             console.log(`[RefreshSignals] NewsAPI error:`, err instanceof Error ? err.message : 'Unknown')
+            newsApiLog.finish('error', err instanceof Error ? err.message : 'Unknown error')
         }
     }
 
+    const googleLog = createSourceLog(companyName, 'Google News RSS', 'api', 'refresh')
     try {
         const googleNews = await fetchNewsFromMultipleSources(companyName)
         console.log(`[RefreshSignals] Google News returned ${googleNews.length} articles`)
         const googleNewsTexts = getNewsTextForProcessing(googleNews)
         allNewsTexts.push(...googleNewsTexts)
+        googleLog.finish('success', `${googleNews.length} articles fetched`, googleNews.length)
     } catch (err) {
         console.log(`[RefreshSignals] Google News error:`, err instanceof Error ? err.message : 'Unknown')
+        googleLog.finish('error', err instanceof Error ? err.message : 'Unknown error')
     }
 
     console.log(`[RefreshSignals] Total news texts for AI processing: ${allNewsTexts.length}`)
 
     if (allNewsTexts.length > 0) {
+        const aiLog = createSourceLog(companyName, 'OpenAI/gpt-4o-mini (signal extraction)', 'ai', 'refresh')
         try {
             const extractedSignals = await extractSignalsFromMultipleTexts(
                 allNewsTexts,
                 companyName
             )
             console.log(`[RefreshSignals] AI extracted ${extractedSignals.length} signals from news`)
+            aiLog.finish('success', `Extracted ${extractedSignals.length} signals from ${allNewsTexts.length} articles`, extractedSignals.length)
 
             for (const signal of extractedSignals) {
                 signals.push({
@@ -400,6 +421,7 @@ export async function refreshCompanySignals(
             }
         } catch (err) {
             console.log(`[RefreshSignals] AI extraction error:`, err instanceof Error ? err.message : 'Unknown')
+            aiLog.finish('error', err instanceof Error ? err.message : 'Unknown error')
         }
     }
 
@@ -421,6 +443,7 @@ export async function refreshCompanySignals(
 
         if (targetWebsite) {
             console.log(`[RefreshSignals] Scraping company website as fallback: ${targetWebsite}`)
+            const scrapeLog = createSourceLog(companyName, `Web Scraper (${targetWebsite})`, 'scraping', 'refresh')
             try {
                 const scrapedData = await scrapeCompanyWebsite(targetWebsite, companyName, {
                     extractSignals: true,
@@ -428,6 +451,7 @@ export async function refreshCompanySignals(
                 })
 
                 if (scrapedData) {
+                    let scrapedSignalCount = 0
                     // Add careers-based hiring signal
                     const careersSignal = generateHiringSignalFromCareers(scrapedData.careersData)
                     if (careersSignal) {
@@ -439,6 +463,7 @@ export async function refreshCompanySignals(
                             confidence: careersSignal.confidence,
                             extraction_method: 'scraping',
                         })
+                        scrapedSignalCount++
                         console.log(`[RefreshSignals] Added careers signal from website`)
                     }
 
@@ -454,6 +479,7 @@ export async function refreshCompanySignals(
                                 extraction_method: 'ai_extracted',
                             })
                         }
+                        scrapedSignalCount += scrapedData.aiSignals.length
                         console.log(`[RefreshSignals] Added ${scrapedData.aiSignals.length} AI signals from website`)
                     }
 
@@ -467,6 +493,7 @@ export async function refreshCompanySignals(
                             confidence: 0.6,
                             extraction_method: 'scraping',
                         })
+                        scrapedSignalCount++
                     }
 
                     // Add description as basic signal if we still have nothing
@@ -479,11 +506,17 @@ export async function refreshCompanySignals(
                             confidence: 0.4,
                             extraction_method: 'scraping',
                         })
+                        scrapedSignalCount++
                         console.log(`[RefreshSignals] Added basic description signal as fallback`)
                     }
+
+                    scrapeLog.finish('success', `Scraped ${targetWebsite}, found ${scrapedSignalCount} signals, ${scrapedData.technologies.length} technologies`, scrapedSignalCount)
+                } else {
+                    scrapeLog.finish('no_data', `Scraping returned no data from ${targetWebsite}`)
                 }
             } catch (err) {
                 console.log(`[RefreshSignals] Scraping error:`, err instanceof Error ? err.message : 'Unknown')
+                scrapeLog.finish('error', err instanceof Error ? err.message : 'Unknown error')
             }
         } else {
             console.log(`[RefreshSignals] No website URL available for scraping fallback`)
@@ -498,44 +531,132 @@ export async function refreshCompanySignals(
 }
 
 /**
- * Deduplicate signals - keep unique signals based on type and evidence
+ * Deduplicate signals - aggressively remove duplicates even across different types and sources.
+ * Keeps the highest-confidence version and merges source labels.
  */
 function deduplicateSignals(signals: Omit<SignalInsert, 'company_id'>[]): Omit<SignalInsert, 'company_id'>[] {
-    const seen = new Map<string, Omit<SignalInsert, 'company_id'>>()
+    if (signals.length === 0) return []
 
+    // Helper: extract meaningful words from text
+    const getWords = (text: string): Set<string> => {
+        return new Set(
+            text.toLowerCase()
+                .replace(/[^a-z0-9\s]/g, '')
+                .split(/\s+/)
+                .filter(w => w.length > 2)
+        )
+    }
+
+    // Helper: compute word overlap ratio between two sets
+    const wordOverlap = (a: Set<string>, b: Set<string>): number => {
+        if (a.size === 0 || b.size === 0) return 0
+        const overlap = [...a].filter(w => b.has(w)).length
+        return overlap / Math.min(a.size, b.size) // Use min for stricter matching
+    }
+
+    // Semantic topic groups — signals about the same underlying topic
+    const topicKeywords: Record<string, string[]> = {
+        hiring: ['hiring', 'positions', 'roles', 'jobs', 'recruiting', 'team', 'talent', 'openings', 'vacancies', 'departments', 'expanding', 'headcount'],
+        tech: ['technology', 'stack', 'infrastructure', 'platform', 'tools', 'software', 'engineering', 'migration', 'cloud', 'modernization'],
+        growth: ['expansion', 'growth', 'market', 'revenue', 'scaling', 'funding', 'investment', 'raised', 'series'],
+        leadership: ['leadership', 'executive', 'ceo', 'cto', 'cfo', 'appointed', 'transition', 'management', 'director', 'chief'],
+        compliance: ['compliance', 'regulatory', 'regulation', 'fca', 'security', 'audit', 'certification', 'gdpr'],
+    }
+
+    // Detect the topic of a signal
+    const detectTopic = (text: string): string | null => {
+        const lower = text.toLowerCase()
+        let bestTopic: string | null = null
+        let bestCount = 0
+        for (const [topic, keywords] of Object.entries(topicKeywords)) {
+            const count = keywords.filter(kw => lower.includes(kw)).length
+            if (count > bestCount) {
+                bestCount = count
+                bestTopic = topic
+            }
+        }
+        return bestCount >= 2 ? bestTopic : null
+    }
+
+    // Phase 1: Exact normalized dedup (same type + nearly identical text)
+    const phase1 = new Map<string, Omit<SignalInsert, 'company_id'>>()
     for (const signal of signals) {
-        // Create a key based on signal type + normalized evidence
-        const evidenceNormalized = signal.evidence_text
+        const normalized = signal.evidence_text
             .toLowerCase()
-            .replace(/[^a-z0-9\s]/g, '')  // Strip punctuation
-            .replace(/\s+/g, ' ')          // Collapse whitespace
-            .replace(/\d+/g, 'X')          // Replace numbers with X
+            .replace(/[^a-z0-9\s]/g, '')
+            .replace(/\s+/g, ' ')
+            .replace(/\d+/g, 'N')
             .trim()
-            .slice(0, 150)  // Use first 150 chars for comparison
-        const key = `${signal.signal_type}:${evidenceNormalized}`
-
-        // Keep the signal with higher confidence
-        const existing = seen.get(key)
+            .slice(0, 120)
+        const key = `${signal.signal_type}:${normalized}`
+        const existing = phase1.get(key)
         if (!existing || (signal.confidence || 0) > (existing.confidence || 0)) {
-            seen.set(key, signal)
+            phase1.set(key, signal)
         }
     }
 
-    // Secondary dedup: for same signal_type, check if evidence words overlap > 80%
-    const results = Array.from(seen.values())
-    const final: Omit<SignalInsert, 'company_id'>[] = []
-
-    for (const signal of results) {
-        const words = new Set(signal.evidence_text.toLowerCase().split(/\s+/).slice(0, 50))
-        const isDuplicate = final.some(existing => {
+    // Phase 2: Same-type word overlap dedup (threshold: 55%)
+    const phase2: Omit<SignalInsert, 'company_id'>[] = []
+    for (const signal of phase1.values()) {
+        const words = getWords(signal.evidence_text)
+        const isDup = phase2.some(existing => {
             if (existing.signal_type !== signal.signal_type) return false
-            const existingWords = new Set(existing.evidence_text.toLowerCase().split(/\s+/).slice(0, 50))
-            const overlap = [...words].filter(w => existingWords.has(w)).length
-            const similarity = overlap / Math.max(words.size, existingWords.size)
-            return similarity > 0.7
+            return wordOverlap(words, getWords(existing.evidence_text)) > 0.55
         })
-        if (!isDuplicate) {
+        if (!isDup) {
+            phase2.push(signal)
+        } else {
+            // Merge: if the duplicate has a different source, append it
+            const match = phase2.find(existing => {
+                if (existing.signal_type !== signal.signal_type) return false
+                return wordOverlap(words, getWords(existing.evidence_text)) > 0.55
+            })
+            if (match && signal.source_label && !match.source_label?.includes(signal.source_label)) {
+                match.source_label = `${match.source_label}, ${signal.source_label}`
+            }
+            // Keep higher confidence
+            if (match && (signal.confidence || 0) > (match.confidence || 0)) {
+                match.evidence_text = signal.evidence_text
+                match.confidence = signal.confidence
+            }
+        }
+    }
+
+    // Phase 3: Cross-type topic dedup — if two signals are about the same topic
+    // and have >50% word overlap, keep only the one with higher confidence
+    const final: Omit<SignalInsert, 'company_id'>[] = []
+    for (const signal of phase2) {
+        const words = getWords(signal.evidence_text)
+        const topic = detectTopic(signal.evidence_text)
+
+        const isDup = final.some(existing => {
+            const existingWords = getWords(existing.evidence_text)
+            const overlap = wordOverlap(words, existingWords)
+
+            // Cross-type: same topic + high word overlap
+            if (topic && topic === detectTopic(existing.evidence_text) && overlap > 0.50) {
+                return true
+            }
+            // Very high overlap regardless of type (clear duplicate)
+            if (overlap > 0.65) {
+                return true
+            }
+            return false
+        })
+
+        if (!isDup) {
             final.push(signal)
+        } else {
+            // Merge source labels into the kept signal
+            const match = final.find(existing => {
+                const existingWords = getWords(existing.evidence_text)
+                const overlap = wordOverlap(words, existingWords)
+                const existingTopic = detectTopic(existing.evidence_text)
+                return (topic && topic === existingTopic && overlap > 0.50) || overlap > 0.65
+            })
+            if (match && signal.source_label && !match.source_label?.includes(signal.source_label)) {
+                match.source_label = `${match.source_label}, ${signal.source_label}`
+            }
         }
     }
 

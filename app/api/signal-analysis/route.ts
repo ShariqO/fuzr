@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { createSourceLog } from '@/lib/logging/data-source-logger'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
@@ -74,6 +75,7 @@ Respond with JSON:
   "urgencyReason": "Is this time-sensitive for the user? Why or why not?"
 }`
 
+        const analysisLog = createSourceLog(companyName, 'OpenAI/gpt-4o-mini (signal analysis)', 'ai', 'analyze')
         const completion = await openai.chat.completions.create({
             model: 'gpt-4o-mini',
             messages: [{ role: 'user', content: prompt }],
@@ -84,10 +86,12 @@ Respond with JSON:
 
         const analysisText = completion.choices[0]?.message?.content
         if (!analysisText) {
+            analysisLog.finish('error', 'No content returned from GPT')
             return NextResponse.json({ error: 'Failed to generate analysis' }, { status: 500 })
         }
 
         const analysis = JSON.parse(analysisText)
+        analysisLog.finish('success', `Generated analysis for signal: ${signalType}`)
 
         return NextResponse.json({ analysis })
     } catch (error) {
