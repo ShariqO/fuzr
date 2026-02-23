@@ -88,7 +88,7 @@ export default function TermsPage() {
                             </Link>
                         </div>
                         <p className="text-sm text-gray-500">
-                            Built for sales teams who care about timing and context.
+                            Built for sales teams who&apos;d rather close deals than chase dead leads.
                         </p>
                     </div>
                 </div>

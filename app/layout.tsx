@@ -10,8 +10,11 @@ const ibmPlexSans = IBM_Plex_Sans({
 })
 
 export const metadata: Metadata = {
-    title: 'FUZR - Turn Signals Into Sales',
-    description: 'FUZR helps sales teams find companies that match their ICP and are ready to talk, using live signals and clear explanations.',
+    title: 'FUZR - Know Who to Sell to, and Why',
+    description: 'FUZR finds the companies most likely to buy from you right now — using real-time signals, AI-powered scoring, and plain-English explanations your whole team can act on.',
+    icons: {
+        icon: '/icon.svg',
+    },
 }
 
 export default function RootLayout({

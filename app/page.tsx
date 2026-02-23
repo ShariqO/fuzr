@@ -79,23 +79,23 @@ export default function HomePage() {
                         {/* Text content */}
                         <div className="animate-fade-in-up">
                             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6">
-                                Turn signals into sales
+                                Stop guessing.<br />Start closing.
                             </h1>
                             <p className="text-lg md:text-xl text-gray-600 leading-relaxed mb-8 max-w-xl">
-                                FUZR helps sales teams find companies that match their ICP and are ready to talk, using live signals and clear explanations.
+                                FUZR tells you which companies need what you sell — right now. Real-time signals, AI scoring, and plain-English reasons so your team knows exactly who to call and what to say.
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4">
                                 <Link
                                     href="/auth/signup"
                                     className="btn-primary px-8 py-4 text-base"
                                 >
-                                    Get started
+                                    Try FUZR free
                                 </Link>
                                 <Link
                                     href="#how-it-works"
                                     className="btn-outline px-8 py-4 text-base"
                                 >
-                                    Learn more
+                                    See how it works
                                 </Link>
                             </div>
                         </div>
@@ -140,7 +140,7 @@ export default function HomePage() {
             <section className="py-20 md:py-28 bg-white">
                 <div className="container-app">
                     <h2 className="scroll-animate text-3xl md:text-4xl font-bold text-gray-900 text-center mb-16">
-                        What we do
+                        Three reasons your pipeline is about to change
                     </h2>
                     <div className="grid md:grid-cols-3 gap-8">
                         {/* Card 1 */}
@@ -157,10 +157,10 @@ export default function HomePage() {
                                 Your browser does not support the video tag.
                             </video>
                             <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                                Identify pain points
+                                Find real problems
                             </h3>
                             <p className="text-gray-600 text-sm leading-relaxed">
-                                Find what your prospects are struggling with so your outreach speaks to real problems, not guesses.
+                                See what a company is actually struggling with — before you ever pick up the phone. Your pitch lands because it&apos;s about their problem, not yours.
                             </p>
                         </div>
 
@@ -178,10 +178,10 @@ export default function HomePage() {
                                 Your browser does not support the video tag.
                             </video>
                             <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                                Spot buying signals
+                                Know when they&apos;re ready to buy
                             </h3>
                             <p className="text-gray-600 text-sm leading-relaxed">
-                                See hiring shifts, tech changes, and growth moves so you contact companies when the timing is right.
+                                Hiring sprees, tech overhauls, leadership changes — FUZR spots the moments that mean a company is ready to spend. You show up at the right time.
                             </p>
                         </div>
 
@@ -199,10 +199,10 @@ export default function HomePage() {
                                 Your browser does not support the video tag.
                             </video>
                             <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                                Personalize your outreach
+                                Send emails people actually reply to
                             </h3>
                             <p className="text-gray-600 text-sm leading-relaxed">
-                                Use clear reasons and context for every account so your messages feel relevant and build trust.
+                                FUZR gives you the context and the words. Every outreach is backed by a real reason — so it reads like you did the homework, because FUZR did.
                             </p>
                         </div>
                     </div>
@@ -218,23 +218,23 @@ export default function HomePage() {
                     <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
                         <div className="scroll-animate">
                             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-                                Clear reasons behind every recommendation
+                                No black boxes. Just answers.
                             </h2>
                             <p className="text-gray-600 text-lg leading-relaxed mb-8">
-                                FUZR scores companies against your ICP and surfaces why they showed up. You see the signals behind each suggestion, so you can decide how to act and what to say.
+                                Every recommendation comes with a clear explanation: why this company, why right now, and why it matters to you. Your reps don&apos;t just get a lead — they get a reason to call.
                             </p>
                             <ul className="space-y-4">
                                 <li className="flex items-start gap-3">
                                     <span className="w-6 h-6 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center text-sm font-medium flex-shrink-0 mt-0.5">1</span>
-                                    <span className="text-gray-700">ICP match based on industry, size, and roles</span>
+                                    <span className="text-gray-700">Tell us who you sell to — industry, size, buyer type</span>
                                 </li>
                                 <li className="flex items-start gap-3">
                                     <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-medium flex-shrink-0 mt-0.5">2</span>
-                                    <span className="text-gray-700">Live signals from hiring, tech, and company changes</span>
+                                    <span className="text-gray-700">FUZR scans thousands of signals — hiring, tech shifts, funding, news</span>
                                 </li>
                                 <li className="flex items-start gap-3">
                                     <span className="w-6 h-6 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center text-sm font-medium flex-shrink-0 mt-0.5">3</span>
-                                    <span className="text-gray-700">Export-ready data for your CRM</span>
+                                    <span className="text-gray-700">You get a ranked list of companies ready to buy, with reasons you can act on</span>
                                 </li>
                             </ul>
                         </div>
@@ -274,10 +274,10 @@ export default function HomePage() {
                 <div className="container-app">
                     <div className="scroll-animate flex flex-col items-center text-center max-w-2xl mx-auto">
                         <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                            Stay in the loop
+                            We&apos;re just getting started
                         </h2>
                         <p className="text-gray-600 text-lg leading-relaxed mb-8">
-                            Get product updates, new features,<br />and signal sources as we grow FUZR.
+                            FUZR is growing fast. Drop your email and be the first to know<br />when we launch new signal sources and features.
                         </p>
                         <form className="flex flex-col sm:flex-row gap-3 w-full max-w-md mb-12" onSubmit={(e) => e.preventDefault()}>
                             <input
@@ -286,7 +286,7 @@ export default function HomePage() {
                                 className="input flex-1"
                             />
                             <button type="submit" className="btn-primary px-6 py-3 whitespace-nowrap">
-                                Stay updated
+                                Keep me posted
                             </button>
                         </form>
                         <div className="relative">
@@ -324,7 +324,7 @@ export default function HomePage() {
                             </Link>
                         </div>
                         <p className="text-sm text-gray-500">
-                            Built for sales teams who care about timing and context.
+                            Built for sales teams who&apos;d rather close deals than chase dead leads.
                         </p>
                     </div>
                 </div>
