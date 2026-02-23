@@ -163,9 +163,17 @@ export function createHiringSignal(analysis: HiringSignal): {
         confidence = 0.7
     }
 
+    const sampleTitles = analysis.recent_postings
+        .map(p => p.title)
+        .filter((t, i, arr) => arr.indexOf(t) === i)
+        .slice(0, 4)
+        .join(', ')
+
+    const sampleRolesStr = sampleTitles ? ` Sample roles: ${sampleTitles}.` : ''
+
     return {
         signal_type: 'Hiring Spike (role-specific)',
-        evidence_text: `Currently advertising ${analysis.total_jobs} open positions. Top categories: ${topCategories}`,
+        evidence_text: `Currently advertising ${analysis.total_jobs} open positions. Top categories: ${topCategories}.${sampleRolesStr}`,
         confidence,
     }
 }

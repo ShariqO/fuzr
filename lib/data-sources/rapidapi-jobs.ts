@@ -357,18 +357,35 @@ function analyzeJobsForSignals(jobs: JobListing[], companyName: string): HiringA
 
     // Generate signals based on CSV criteria
 
-    // Hiring velocity signal
-    if (jobs.length >= 10) {
+    // Hiring velocity signal - include specific details
+    if (jobs.length >= 5) {
+        const deptList = Object.entries(departments)
+            .sort((a, b) => b[1] - a[1])
+            .map(([dept, count]) => `${dept} (${count})`)
+            .join(', ')
+
+        const seniorityList = Object.entries(seniorityLevels)
+            .sort((a, b) => b[1] - a[1])
+            .map(([level, count]) => `${level}: ${count}`)
+            .join(', ')
+
+        const sampleTitles = jobs
+            .slice(0, 6)
+            .map(j => j.title)
+            .filter((t, i, arr) => arr.indexOf(t) === i)
+            .slice(0, 5)
+            .join(', ')
+
+        const techMentions = techStack.length > 0
+            ? ` Technologies mentioned: ${techStack.slice(0, 8).join(', ')}.`
+            : ''
+
+        const text = `Active hiring with ${jobs.length}+ open positions across ${Object.keys(departments).length} departments. Departments: ${deptList}. Seniority breakdown: ${seniorityList || 'Mixed levels'}. Sample roles: ${sampleTitles}.${techMentions}`
+
         signals.push({
             type: 'Hiring Spike (role-specific)',
-            text: `Active hiring with ${jobs.length}+ open positions across ${Object.keys(departments).length} departments`,
-            confidence: 0.9,
-        })
-    } else if (jobs.length >= 5) {
-        signals.push({
-            type: 'Hiring Spike (role-specific)',
-            text: `Moderate hiring activity with ${jobs.length} open positions`,
-            confidence: 0.7,
+            text,
+            confidence: jobs.length >= 10 ? 0.9 : 0.7,
         })
     }
 
