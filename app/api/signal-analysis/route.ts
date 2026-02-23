@@ -40,39 +40,39 @@ export async function POST(request: Request) {
         const targetPersonas = (profile as any)?.typical_buyer_personas?.join(', ') || ''
         const userFullName = (profile as any)?.full_name || ''
 
-        const prompt = `You are a senior sales intelligence analyst helping a B2B sales professional understand a business signal in depth. Your analysis must be SPECIFIC — never vague or generic. Extract every concrete detail from the evidence and explain exactly what it means.
+        const prompt = `You are a sales intelligence analyst. Your job is to help a sales professional understand whether a business signal reveals a PAIN POINT that their product or service can solve. Be honest — if the signal doesn't indicate a good fit, say so clearly.
 
 COMPANY: ${companyName}
 INDUSTRY: ${companyIndustry || 'Unknown'}
 SIGNAL TYPE: ${signalType}
 EVIDENCE: ${evidenceText}
 
-USER PROFILE:
+THE USER (who is reading this analysis):
 - Name: ${userFullName}
 - Role: ${userRole}
-- Selling Category: ${userSellingCategory}
-- What They Sell: ${userSellingDescription}
-- Target Industries: ${targetIndustries}
-- Target Company Sizes: ${targetSizeBands}
-- Target Buyer Personas: ${targetPersonas}
+- Sells: ${userSellingDescription || userSellingCategory}
+- Targets industries: ${targetIndustries || 'Not specified'}
+- Targets company sizes: ${targetSizeBands || 'Not specified'}
+- Typical buyers: ${targetPersonas || 'Not specified'}
 
-ANALYSIS INSTRUCTIONS:
-1. **deepAnalysis**: Parse the evidence and explain SPECIFICS. If it mentions departments, name each one and explain what hiring in that department indicates. If it mentions positions/roles, break them down by type and explain what each hiring pattern suggests about the company's strategic direction. If numbers are mentioned, put them in context (e.g., "10+ positions is unusually high for a company this size, suggesting rapid scaling"). Reference actual data from the evidence.
-2. **relevanceToUser**: Explain exactly why this matters to someone who sells "${userSellingDescription || userSellingCategory}". Connect specific details from the signal to the user's product/service. For example, if the company is hiring engineers and the user sells developer tools, explain which specific roles might need the user's tool and why.
-3. **actionableInsight**: Give a specific, tactical next step. Name the exact persona to reach out to, suggest a specific angle based on the signal, and explain timing.
-4. **keyDetails**: Extract EVERY specific data point from the evidence. Each bullet should be a distinct, concrete fact - department names, role titles, technologies, counts, etc. Aim for 4-6 detailed bullet points.
-5. **urgencyReason**: Explain timing with specifics - are they in active hiring mode? Is there a budget cycle implication? How long does this window typically last?
+YOUR TASK:
+Think about what this signal reveals about the company's situation, challenges, or direction. Then evaluate whether the user's offering ("${userSellingDescription || userSellingCategory}") is relevant to any pain point this signal exposes.
 
-Provide a JSON response:
+RULES:
+- Focus ONLY on information that is relevant to the user. Don't list details just because they exist.
+- If the signal suggests a pain point the user can solve, explain the connection clearly.
+- If the signal does NOT suggest a fit, be upfront: say this signal may not indicate a need for what the user sells, and explain why.
+- Reference specifics from the evidence (department names, role titles, technologies, etc.) only when they help explain relevance to the user.
+- Keep it practical and human. No filler, no fluff.
+
+Respond with JSON:
 {
-  "deepAnalysis": "3-4 sentence detailed breakdown with specific numbers, departments, roles, and what each indicates about the company's strategic direction",
-  "relevanceToUser": "2-3 sentences connecting specific signal details to what the user sells (${userSellingCategory}), naming exact buyer personas and use cases",
-  "actionableInsight": "1-2 specific tactical steps: who to contact (by role/title), what to say, and why now",
-  "keyDetails": ["Specific fact 1 with numbers", "Specific fact 2 with context", "Specific fact 3", "Specific fact 4", "Additional specific detail"],
-  "urgencyReason": "Time-sensitivity explanation with specific reasoning"
-}
-
-Be concrete and reference actual data from the evidence. Never say things like "various departments" or "multiple roles" when specifics are available.`
+  "deepAnalysis": "What is this company going through based on this signal? What underlying pain point or strategic shift does it reveal? (2-3 sentences, grounded in the evidence)",
+  "relevanceToUser": "How does this connect to what the user sells? Be specific about WHY this matters to them — or be honest that it may not be a strong fit and explain why. (2-3 sentences)",
+  "actionableInsight": "If relevant: one specific next step — who to contact, what angle to use, and why the timing matters. If not relevant: suggest what kind of signal WOULD indicate a fit for this company.",
+  "keyDetails": ["Only details from the evidence that matter to the user's selling context — filtered for relevance, not completeness"],
+  "urgencyReason": "Is this time-sensitive for the user? Why or why not?"
+}`
 
         const completion = await openai.chat.completions.create({
             model: 'gpt-4o-mini',
