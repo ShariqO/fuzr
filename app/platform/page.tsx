@@ -154,7 +154,7 @@ export default function PlatformPage() {
             {/* Footer */}
             <footer className="py-12 bg-gray-50 border-t border-gray-100">
                 <div className="container-app">
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div className="flex flex-col items-center gap-6 text-center">
                         <div className="text-lg font-bold text-gray-900">
                             FUZR
                         </div>
@@ -165,14 +165,14 @@ export default function PlatformPage() {
                             <Link href="/platform" className="text-gray-600 hover:text-gray-900 transition-colors">
                                 Platform
                             </Link>
-                            <Link href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+                            <Link href="/privacy" className="text-gray-600 hover:text-gray-900 transition-colors">
                                 Privacy
                             </Link>
-                            <Link href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+                            <Link href="/terms" className="text-gray-600 hover:text-gray-900 transition-colors">
                                 Terms
                             </Link>
                         </div>
-                        <p className="text-sm text-gray-500 text-center md:text-right">
+                        <p className="text-sm text-gray-500">
                             Built for sales teams who care about timing and context.
                         </p>
                     </div>

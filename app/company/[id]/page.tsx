@@ -253,8 +253,62 @@ export default function CompanyDetailPage() {
             })
 
             if (response.ok) {
-                // Reload the page to get fresh data
-                window.location.reload()
+                // Re-fetch signals from DB
+                const { data: signalsData } = await supabase
+                    .from('signals')
+                    .select('*')
+                    .eq('company_id', companyId)
+                    .order('signal_date', { ascending: false })
+
+                // Client-side dedup
+                const rawSignals = (signalsData || []) as any[]
+                const deduped: any[] = []
+                for (const signal of rawSignals) {
+                    const words = new Set(
+                        signal.evidence_text.toLowerCase()
+                            .replace(/[^a-z0-9\s]/g, '')
+                            .split(/\s+/)
+                            .filter((w: string) => w.length > 2)
+                    )
+                    const isDup = deduped.some((existing: any) => {
+                        if (existing.signal_type !== signal.signal_type) return false
+                        const existingWords = new Set(
+                            existing.evidence_text.toLowerCase()
+                                .replace(/[^a-z0-9\s]/g, '')
+                                .split(/\s+/)
+                                .filter((w: string) => w.length > 2)
+                        )
+                        const overlap = [...words].filter(w => existingWords.has(w)).length
+                        const similarity = overlap / Math.max(words.size, existingWords.size)
+                        return similarity > 0.6
+                    })
+                    if (!isDup) deduped.push(signal)
+                }
+                setSignals(deduped)
+
+                // Recalculate match score & confidence
+                try {
+                    const scoreResponse = await fetch(`/api/companies/${companyId}/score`, {
+                        method: 'POST',
+                    })
+                    if (scoreResponse.ok) {
+                        const scoreData = await scoreResponse.json()
+                        setRecommendation({
+                            id: '',
+                            user_id: '',
+                            company_id: companyId,
+                            score: scoreData.score,
+                            confidence: scoreData.confidence,
+                            explanation_json: scoreData.explanation_json,
+                            created_at: new Date().toISOString(),
+                        })
+                    }
+                } catch (scoreErr) {
+                    console.error('Score calculation failed:', scoreErr)
+                }
+
+                // Update last refreshed
+                setLastRefreshed(new Date().toISOString())
             }
         } catch (error) {
             console.error('Refresh failed:', error)
@@ -557,10 +611,16 @@ export default function CompanyDetailPage() {
                                 </div>
                             </>
                         ) : (
-                            <div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Match Score</p>
-                                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Generate recommendations on the dashboard to see this company&apos;s score</p>
-                            </div>
+                            <>
+                                <div>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">Match Score</p>
+                                    <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">{isRefreshing ? 'Calculating...' : 'Click Refresh Data to calculate'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">Confidence</p>
+                                    <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">{isRefreshing ? 'Calculating...' : 'Click Refresh Data to calculate'}</p>
+                                </div>
+                            </>
                         )}
                     </CardContent>
                 </Card>

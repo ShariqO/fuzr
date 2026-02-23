@@ -316,10 +316,10 @@ export default function HomePage() {
                             <Link href="/platform" className="text-gray-600 hover:text-gray-900 transition-colors">
                                 Platform
                             </Link>
-                            <Link href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+                            <Link href="/privacy" className="text-gray-600 hover:text-gray-900 transition-colors">
                                 Privacy
                             </Link>
-                            <Link href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+                            <Link href="/terms" className="text-gray-600 hover:text-gray-900 transition-colors">
                                 Terms
                             </Link>
                         </div>
