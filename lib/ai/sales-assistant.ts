@@ -6,6 +6,8 @@
 import { getOpenAIClient, isAIEnabled } from './openai-client'
 import type { Company, Signal, Profile } from '@/types/database'
 import type { HunterPerson } from '../data-sources/hunter'
+import { buildRAGContext } from './rag'
+import { SupabaseClient } from '@supabase/supabase-js'
 
 export interface PainPointAnalysis {
     painPoints: Array<{
@@ -46,7 +48,8 @@ export async function analyzePainPoints(
     company: Company,
     signals: Signal[],
     profile: Profile,
-    newsArticles: Array<{ text: string; source: string }> = []
+    newsArticles: Array<{ text: string; source: string }> = [],
+    supabase?: SupabaseClient
 ): Promise<PainPointAnalysis | null> {
     const openai = getOpenAIClient()
     if (!openai) {
@@ -65,6 +68,19 @@ export async function analyzePainPoints(
             `- ${n.text.slice(0, 300)}... (${n.source})`
         ).join('\n')
 
+        let ragContextText = '';
+        if (supabase) {
+            try {
+                const query = `Challenges, pain points, or buying signals for ${company.name} in ${company.industry}`;
+                const ragData = await buildRAGContext(supabase, query);
+                if (ragData?.formattedContext) {
+                    ragContextText = `\nADDITIONAL RAG CONTEXT (Similar Companies & Cross-Signals):\n${ragData.formattedContext}\n`;
+                }
+            } catch (err) {
+                console.error('[SalesAssistant] RAG error:', err);
+            }
+        }
+
         const prompt = `You are a sales intelligence analyst. Analyze this company to identify pain points, challenges, and sales opportunities.
 
 COMPANY PROFILE:
@@ -79,7 +95,7 @@ ${signalContext || 'No signals detected yet'}
 
 RECENT NEWS:
 ${newsContext || 'No recent news available'}
-
+${ragContextText}
 SALES REP'S PRODUCT/SERVICE:
 ${profile.selling_description}
 
@@ -142,7 +158,8 @@ export async function generateOutreachEmail(
     signals: Signal[],
     profile: Profile,
     contact?: ContactRecommendation,
-    painPoints?: PainPointAnalysis
+    painPoints?: PainPointAnalysis,
+    supabase?: SupabaseClient
 ): Promise<GeneratedEmail | null> {
     const openai = getOpenAIClient()
     if (!openai) {
@@ -158,6 +175,19 @@ export async function generateOutreachEmail(
         const painPointContext = painPoints?.painPoints.slice(0, 3).map(p =>
             `- ${p.title}: ${p.description}`
         ).join('\n') || 'No specific pain points identified'
+
+        let ragContextText = '';
+        if (supabase) {
+            try {
+                const query = `Outreach personalization signals for ${company.name}`;
+                const ragData = await buildRAGContext(supabase, query);
+                if (ragData?.formattedContext) {
+                    ragContextText = `\nADDITIONAL CONTEXT (RAG):\n${ragData.formattedContext}\n`;
+                }
+            } catch (err) {
+                console.error('[SalesAssistant] RAG error:', err);
+            }
+        }
 
         const contactName = contact?.name || 'the right person'
         const contactTitle = contact?.title || 'decision maker'
@@ -178,7 +208,7 @@ ${signalContext || 'None available'}
 
 PAIN POINTS IDENTIFIED:
 ${painPointContext}
-
+${ragContextText}
 WHAT WE'RE SELLING:
 ${profile.selling_description}
 

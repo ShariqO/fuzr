@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { createSourceLog } from '@/lib/logging/data-source-logger'
+import { buildRAGContext } from '@/lib/ai/rag'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
@@ -41,12 +42,22 @@ export async function POST(request: Request) {
         const targetPersonas = (profile as any)?.typical_buyer_personas?.join(', ') || ''
         const userFullName = (profile as any)?.full_name || ''
 
+        let ragContext = null
+        try {
+            ragContext = await buildRAGContext(supabase as any, `${companyName} ${signalType} ${evidenceText}`)
+        } catch (error) {
+            console.error('RAG context error:', error)
+        }
+
         const prompt = `You are a sales intelligence analyst. Your job is to help a sales professional understand whether a business signal reveals a PAIN POINT that their product or service can solve. Be honest — if the signal doesn't indicate a good fit, say so clearly.
 
 COMPANY: ${companyName}
 INDUSTRY: ${companyIndustry || 'Unknown'}
 SIGNAL TYPE: ${signalType}
 EVIDENCE: ${evidenceText}
+
+RETRIEVED INTELLIGENCE:
+${ragContext?.formattedContext || 'No additional context available.'}
 
 THE USER (who is reading this analysis):
 - Name: ${userFullName}
@@ -61,6 +72,7 @@ Think about what this signal reveals about the company's situation, challenges, 
 
 RULES:
 - Focus ONLY on information that is relevant to the user. Don't list details just because they exist.
+- Reference cross-company patterns from RETRIEVED INTELLIGENCE when relevant to support your analysis.
 - If the signal suggests a pain point the user can solve, explain the connection clearly.
 - If the signal does NOT suggest a fit, be upfront: say this signal may not indicate a need for what the user sells, and explain why.
 - Reference specifics from the evidence (department names, role titles, technologies, etc.) only when they help explain relevance to the user.

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { refreshCompanySignals, type RefreshResult } from '@/lib/pipeline/company-enricher'
 import { getCompanyById, updateCompany, insertSignals, deleteSignalsByMethod } from '@/lib/db/queries'
+import { batchEmbedSignals } from '@/lib/ai/rag'
 import { NextResponse } from 'next/server'
 import type { Database } from '@/types/database'
 
@@ -104,6 +105,24 @@ export async function POST(
         }))
 
         await insertSignals(supabase, signalsToInsert)
+
+        // RAG: Generate embeddings for newly inserted signals
+        // Fetch the just-inserted signals to get their IDs
+        const { data: insertedSignals } = await supabase
+            .from('signals')
+            .select('id, evidence_text')
+            .eq('company_id', companyId)
+            .order('created_at', { ascending: false })
+            .limit(newSignals.length)
+
+        if (insertedSignals && insertedSignals.length > 0) {
+            console.log(`[Refresh] Generating embeddings for ${insertedSignals.length} signals...`)
+            const embedded = await batchEmbedSignals(
+                supabase,
+                (insertedSignals as any[]).map(s => ({ id: s.id, evidence_text: s.evidence_text }))
+            )
+            console.log(`[Refresh] Embedded ${embedded}/${insertedSignals.length} signals`)
+        }
 
         // Update company with all discovered data
         await updateCompany(supabase, companyId, companyUpdates)

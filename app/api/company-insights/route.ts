@@ -11,6 +11,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import OpenAI from 'openai'
 import { searchCompanyNews, getNewsForAIProcessing, isNewsAPIEnabled } from '@/lib/data-sources/newsapi'
+import { buildRAGContext } from '@/lib/ai/rag'
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
@@ -152,7 +153,14 @@ export async function POST(request: Request) {
         }
 
         // 3. Use AI to analyze the data
-        if (dataSources.length === 0) {
+        let ragContext = null
+        try {
+            ragContext = await buildRAGContext(supabase as any, `${companyName} ${industry || ''} trends`)
+        } catch (error) {
+            console.error('[CompanyInsights] RAG error:', error)
+        }
+
+        if (dataSources.length === 0 && !ragContext?.formattedContext) {
             return NextResponse.json({
                 success: true,
                 insights: {
@@ -175,6 +183,9 @@ ${trendList}
 
 Recent news and company content:
 ${dataSources.slice(0, 8).join('\n\n---\n\n')}
+
+Retrieved Intelligence (Past Signals & Patterns):
+${ragContext?.formattedContext || 'None'}
 
 Return a JSON object with this exact structure:
 {

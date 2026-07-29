@@ -14,6 +14,8 @@ import { getOpenAIClient } from '@/lib/ai/openai-client'
 import { searchCompanyNews, isNewsAPIEnabled } from '@/lib/data-sources/newsapi'
 import { analyzeHiringSignals } from '@/lib/data-sources/adzuna'
 import { scrapeCompanyWebsite } from '@/lib/enrichment/web-scraper'
+import { retrieveRelevantSignals } from '@/lib/ai/rag'
+import { createClient } from '@/lib/supabase/server'
 
 interface OutreachRequest {
     message: string
@@ -125,6 +127,22 @@ export async function POST(request: NextRequest) {
                 companyInsights,
                 contacts: [], // Will be populated by contact finding
             }
+
+            try {
+                const clientOrPromise = createClient()
+                const supabase = clientOrPromise instanceof Promise ? await clientOrPromise : clientOrPromise
+                const ragSignals = await retrieveRelevantSignals(supabase, message)
+                if (ragSignals && ragSignals.length > 0) {
+                    const ragStrings = ragSignals.map((s: any) => 
+                        `${s.signal_type || 'RAG Signal'}: ${s.evidence_text || ''}`
+                    )
+                    if (!enrichedContext!.signals) enrichedContext!.signals = []
+                    enrichedContext!.signals.push(...ragStrings)
+                }
+            } catch (err) {
+                console.error('[OutreachAssistant] RAG retrieval error:', err)
+            }
+
             contextUpdate = enrichedContext
 
             // Store research for response
